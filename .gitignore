@@ -6,3 +6,5 @@ venv/
 *.pot
 *.pyc
 __pycache__
+.vscode
+*/migrations/*
