@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from courses.models import Course, CourseTeacher, CourseSemester
+from courses.models import Course, CourseTeacher, CourseSemester, Lab, LearningOutcome
 from user_profiles.models import UserProfile
 
 
@@ -9,6 +9,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ["pk", "course_name", "department", "course_semester", "creater"]
+        lookup_field = ["pk"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,7 +46,7 @@ class CourseTeacherSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        course_pk = self.context["view"].kwargs.get("pk")
+        course_pk = self.context["view"].kwargs.get("course_pk")
         if course_pk:
             self.fields["course_semester"] = serializers.PrimaryKeyRelatedField(
                 many=True, queryset=CourseSemester.objects.filter(course__pk=course_pk)
@@ -69,3 +70,21 @@ class CourseTeacherSerializer(serializers.ModelSerializer):
                 course_teacher.delete()
                 raise serializers.ValidationError({"course_semester": [str(e)]})
         return course_teacher
+
+
+class LabSerializer(serializers.ModelSerializer):
+    course_semester = serializers.ReadOnlyField(source="course_semester.semester_name")
+    course = serializers.ReadOnlyField(source="course_semester.course.course_name")
+
+    class Meta:
+        model = Lab
+        fields = ("lab_name", "lab_type", "weight", "course_semester", "course")
+        lookup_field = ["semester_name", "course", "pk"]
+
+
+class LearningOutcomeSerializer(serializers.ModelSerializer):
+    course = serializers.ReadOnlyField(source="course.course_name")
+
+    class Meta:
+        model = LearningOutcome
+        filds = ("pk", "outcome_name", "outcome_description")

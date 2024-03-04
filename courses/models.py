@@ -38,12 +38,23 @@ class Lab(models.Model):
     weight = models.FloatField(
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)], null=True
     )
-    lab_name = models.CharField(primary_key=True)
+    lab_name = models.CharField(primary_key=True, blank=True, unique=True)
     lab_type = models.CharField(max_length=50, choices=LAB_TYPE_CHOICES)
 
     course_semester = models.ForeignKey(
         CourseSemester, on_delete=models.CASCADE, null=True
     )
+
+    def save(self, *args, **kwargs):
+        if not self.lab_name:
+            last_lab = Lab.objects.order_by("-lab_name").first()
+            if last_lab:
+                lab_number = int(last_lab.lab_name.split("-")[0].replace("Lab", "")) + 1
+            else:
+                lab_number = 1
+            self.lab_name = f"Lab{lab_number}-{self.lab_type}"
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Lab {self.lab_name}"
