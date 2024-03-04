@@ -1,57 +1,72 @@
-# Create your views here.
-from django.shortcuts import render
+from courses.models import Course, CourseTeacher, CourseSemester
+from courses.serializers import (
+    CourseSerializer,
+    CourseSemesterSerializer,
+    CourseTeacherSerializer,
+)
+from rest_framework import generics
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from courses.permissions import IsLecturerOrHeadLecturer, IsTeachingCourse
+from user_profiles.permissions import IsTeacher
 
-from django.http.response import JsonResponse
-from rest_framework.parsers import JSONParser 
-from rest_framework import status
- 
-from courses.models import Course
-from courses.serializers import CourseSerializer
-from rest_framework.decorators import api_view
+
+class CourseList(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated, IsTeacher]
+
+    def get_queryset(self):
+        return Course.objects.filter(
+            course_semester__semester_teacher__teacher=self.request.user
+        )
+
+    serializer_class = CourseSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(creater=self.request.user)
 
 
-@api_view(['GET', 'POST', 'DELETE'])
-def course_list(request):
-    # GET list of courses or find courses by course_name
-    if request.method == 'GET':
-        courses = Course.objects.all()
+class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, IsTeachingCourse]
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
 
-        course_name = request.GET.get('course_name', None)
-        if course_name is not None:
-            courses = courses.filter(course_name__icontains=course_name)
-        courses_serializer = CourseSerializer(courses, many=True)
-        return JsonResponse({'course_name filter':course_name, 'data':courses_serializer.data }, safe=False)
-    # POST a new course
-    elif request.method == 'POST':
-        course_data = JSONParser().parse(request)
-        courses_serializer = CourseSerializer(data=course_data)
-        if courses_serializer.is_valid():
-            courses_serializer.save()
-            return JsonResponse(courses_serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(courses_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
- 
-@api_view(['GET', 'PUT', 'DELETE'])
-def course_detail(request, pk):
-    # find course by pk (id)
-    try: 
-        course = Course.objects.get(pk=pk) 
-    except Course.DoesNotExist: 
-        return JsonResponse({'message': 'Course does not exist'}, status=status.HTTP_404_NOT_FOUND) 
-    # GET a course
-    if request.method == 'GET':
-        course_serializer = CourseSerializer(course)
-        return JsonResponse(course_serializer.data)
-    # PUT a course
-    elif request.method == 'PUT':
-        course_data = JSONParser().parse(request)
-        course_serializer = CourseSerializer(course, data=course_data)
-        if course_serializer.is_valid():
-            course_serializer.save()
-            return JsonResponse(course_serializer.data)
-        return JsonResponse(course_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    # DELETE a course
-    elif request.method == 'DELETE':
-        course.delete()
-        return JsonResponse({'message':'Course was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
-    
+
+class CourseSemesterList(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated, IsTeacher, IsTeachingCourse]
+    serializer_class = CourseSemesterSerializer
+
+    def get_queryset(self):
+        course_pk = self.kwargs.get("pk")
+        return CourseSemester.objects.filter(course__pk=course_pk)
+
+    def perform_create(self, serializer):
+        target_course = Course.objects.get(pk=self.kwargs.get("pk"))
+        serializer.save(course=target_course)
+
+
+class CourseSemesterDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, IsTeachingCourse]
+    serializer_class = CourseSemesterSerializer
+    queryset = CourseSemester.objects.all()
+    lookup_url_kwarg = ["semester_name", "course_pk"]
+    lookup_field = ["semester_name", "course_pk"]
+
+    def get_object(self):
+        course_pk = self.kwargs.get("course_pk")
+        semester_name = self.kwargs.get("semester_name")
+        queryset = self.get_queryset()
+        obj = get_object_or_404(
+            queryset, course__pk=course_pk, semester_name=semester_name
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+
+class CourseTeacherList(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated, IsTeacher]
+    serializer_class = CourseTeacherSerializer
+
+    def get_queryset(self):
+        return CourseTeacher.objects.filter(
+            course_semester__course__pk=self.kwargs.get("pk")
+        )
