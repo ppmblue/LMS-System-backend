@@ -1,6 +1,6 @@
 asgiref==3.7.2
 astroid==3.0.3
-backports.zoneinfo==0.2.1
+backports.zoneinfo==0.2.1;python_version<"3.9"
 colorama==0.4.6
 dill==0.3.8
 Django==4.2.10
