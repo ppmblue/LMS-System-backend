@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["103.75.186.201"]
 
 # Application definition
 
@@ -63,7 +63,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "LMSSystemBackend.urls"
 CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = ("http://localhost:8081",)
+CORS_ORIGIN_WHITELIST = ("http://localhost:8081", "http://103.75.186.201:8081")
 
 TEMPLATES = [
     {
