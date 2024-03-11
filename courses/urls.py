@@ -46,4 +46,14 @@ urlpatterns = [
         views.LearningOutcomeDetail.as_view(),
         name="lo-detail",
     ),
+    path(
+        "courses/<str:course_code>/semesters/<str:semester_name>/labs/<str:lab_pk>/contributions",
+        views.LabLOList.as_view(),
+        name="lab-lo-list",
+    ),
+    path(
+        "courses/<str:course_code>/semesters/<str:semester_name>/labs/<str:lab_pk>/contributions/<str:outcome_code>",
+        views.LabLODetail.as_view(),
+        name="lab-lo-detail",
+    ),
 ]

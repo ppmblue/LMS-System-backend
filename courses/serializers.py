@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from courses.models import Course, CourseTeacher, CourseSemester, Lab, LearningOutcome
+from courses.models import (
+    Course,
+    CourseTeacher,
+    CourseSemester,
+    Lab,
+    LearningOutcome,
+    LabLOContribution,
+)
 from user_profiles.models import UserProfile
 
 
@@ -125,7 +132,14 @@ class LabSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lab
-        fields = ("lab_name", "lab_type", "weight", "course_semester", "course")
+        fields = (
+            "lab_name",
+            "lab_type",
+            "weight",
+            "course_semester",
+            "course",
+            "outcome",
+        )
         lookup_field = ["semester_name", "course__course_code", "pk"]
 
 
@@ -136,3 +150,45 @@ class LearningOutcomeSerializer(serializers.ModelSerializer):
         model = LearningOutcome
         fields = ("pk", "outcome_code", "outcome_name", "outcome_description", "course")
         lookup_field = ["course__course_code", "outcome_code"]
+
+
+class LabLOContributionSerializer(serializers.ModelSerializer):
+    lab = serializers.StringRelatedField(read_only=True)
+    course_semester = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = LabLOContribution
+        fields = ("pk", "course_semester", "lab", "outcome", "contribution_percentage")
+        lookup_field = [
+            "course_semester__semester_name",
+            "lab__lab_name",
+            "outcome__outcome_code",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        course_code = self.context["view"].kwargs.get("course_code")
+        if course_code:
+            self.fields["outcome"] = serializers.SlugRelatedField(
+                queryset=LearningOutcome.objects.filter(
+                    course__course_code=course_code
+                ).select_related("course"),
+                slug_field="outcome_code",
+            )
+
+
+class CourseSemesterReadSerializer(serializers.ModelSerializer):
+    course = serializers.StringRelatedField(read_only=True)
+    lab_lo_contributions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CourseSemester
+        fields = ("pk", "semester_name", "num_of_lab", "course", "lab_lo_contributions")
+        lookup_field = ["semester_name", "course"]
+
+    def get_lab_lo_contributions(self, instance):
+        return (
+            LabLOContribution.objects.filter(course_semester=instance)
+            .select_related("course_semester", "lab", "outcome")
+            .values_list("lab", "outcome__outcome_code", "contribution_percentage")
+        )

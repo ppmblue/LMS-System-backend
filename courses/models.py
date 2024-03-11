@@ -80,13 +80,24 @@ class LearningOutcome(models.Model):
 
 
 class LabLOContribution(models.Model):
-    lab = models.ForeignKey(Lab, on_delete=models.CASCADE)
-    learning_outcome = models.ForeignKey(LearningOutcome, on_delete=models.CASCADE)
-    contribution_percentage = models.DecimalField(max_digits=5, decimal_places=2)
-    course_semester = models.ForeignKey(CourseSemester, on_delete=models.CASCADE)
+    lab = models.ForeignKey(
+        Lab, related_name="contribution_lab", on_delete=models.CASCADE
+    )
+    outcome = models.ForeignKey(
+        LearningOutcome,
+        related_name="contribution_lo",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    contribution_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, null=False
+    )
+    course_semester = models.ForeignKey(
+        CourseSemester, related_name="contribution_semester", on_delete=models.CASCADE
+    )
 
     def __str__(self):
-        return f"{self.lab.lab_name} - {self.learning_outcome.outcome_description} - {self.course_semester.semester_name}"
+        return f"{self.learning_outcome.outcome_code}-{self.contribution_percentage} of {self.lab.lab_name}"
 
 
 class CourseTeacher(models.Model):

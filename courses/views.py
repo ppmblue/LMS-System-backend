@@ -1,14 +1,23 @@
-from courses.models import Course, CourseTeacher, CourseSemester, Lab, LearningOutcome
-from rest_framework import exceptions
+from courses.models import (
+    Course,
+    CourseTeacher,
+    CourseSemester,
+    Lab,
+    LearningOutcome,
+    LabLOContribution,
+)
+from rest_framework import exceptions, serializers
 
 
 from courses.serializers import (
     CourseSerializer,
     CourseReadSerializer,
     CourseSemesterSerializer,
+    CourseSemesterReadSerializer,
     CourseTeacherSerializer,
     LabSerializer,
     LearningOutcomeSerializer,
+    LabLOContributionSerializer,
 )
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
@@ -74,8 +83,8 @@ class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
 
 class CourseSemesterList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTeacher]
-    serializer_class = CourseSemesterSerializer
     lookup_url_kwarg = ["course_code"]
+    serializer_class = CourseSemesterSerializer
 
     def check_permissions(self, request):
         course_code = self.kwargs.get("course_code")
@@ -100,6 +109,11 @@ class CourseSemesterDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CourseSemesterSerializer
     lookup_url_kwarg = ["semester_name", "course_code"]
     lookup_field = ["semester_name", "course__course_code"]
+
+    def get_serializer_class(self):
+        if (self.request.method) in ["PUT", "PATCH", "DELETE"]:
+            return CourseSemesterSerializer
+        return CourseSemesterReadSerializer
 
     def get_object(self):
         course_code = self.kwargs.get("course_code")
@@ -229,6 +243,63 @@ class LearningOutcomeDetail(generics.RetrieveUpdateDestroyAPIView):
             LearningOutcome.objects.all().select_related("course"),
             course__course_code=self.kwargs.get("course_code"),
             outcome_code=self.kwargs.get("outcome_code"),
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+
+class LabLOList(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated, CanManageLabData]
+    serializer_class = LabLOContributionSerializer
+    lookup_url_kwarg = ["semester_name", "course_code", "lab_pk"]
+    lookup_field = ["semester_name", "course_code", "lab_pk"]
+
+    def get_queryset(self):
+        course_code = self.kwargs.get("course_code")
+        semester_name = self.kwargs.get("semester_name")
+        return LabLOContribution.objects.filter(
+            course_semester__semester_name=semester_name,
+            course_semester__course__course_code=course_code,
+            lab__lab_name=lab_pk,
+        ).select_related("course_semester", "lab")
+
+    def perform_create(self, serializer):
+        course_code = self.kwargs.get("course_code")
+        semester_name = self.kwargs.get("semester_name")
+        lab_name = self.kwargs.get("lab_pk")
+        try:
+            target_lab = Lab.objects.get(
+                course_semester__semester_name=semester_name,
+                course_semester__course__course_code=course_code,
+                lab_name=lab_name,
+            )
+        except Lab.DoesNotExist as e:
+            raise serializers.ValidationError({"Lab": [str(e)]})
+
+        serializer.save(
+            lab=target_lab,
+            course_semester=target_lab.course_semester,
+        )
+
+
+class LabLODetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, CanManageLabData]
+    serializer_class = LabLOContributionSerializer
+    lookup_url_kwarg = ["semester_name", "course_code", "lab_pk", "outcome_code"]
+    lookup_field = ["semester_name", "course_code", "lab_pk", "outcome_code"]
+
+    def get_object(self):
+        course_code = self.kwargs.get("course_code")
+        semester_name = self.kwargs.get("semester_name")
+        lab_name = self.kwargs.get("lab_pk")
+        outcome_code = self.kwargs.get("outcome_code")
+        obj = get_object_or_404(
+            LabLOContribution.objects.filter(
+                course_semester__semester_name=semester_name,
+                lab__lab_name=lab_name,
+                course_semester__course__course_code=course_code,
+            ).select_related("course_semester", "lab"),
+            outcome__outcome_code=outcome_code,
         )
         self.check_object_permissions(self.request, obj)
         return obj
