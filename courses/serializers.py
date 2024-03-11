@@ -138,7 +138,6 @@ class LabSerializer(serializers.ModelSerializer):
             "weight",
             "course_semester",
             "course",
-            "outcome",
         )
         lookup_field = ["semester_name", "course__course_code", "pk"]
 
