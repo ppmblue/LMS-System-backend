@@ -3,11 +3,16 @@ from user_profiles.models import UserProfile
 from courses.models import Course
 
 
-class UserSerializer(serializers.ModelSerializer):
-    courses_created = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Course.objects.all()
-    )
+class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ["__all__", "courses_created"]
+        fields = [
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "phone_number",
+            "is_teacher",
+        ]
+        read_only_fields = ["username", "email", "is_teacher"]
