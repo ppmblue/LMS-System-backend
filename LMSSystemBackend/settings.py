@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["103.75.186.201", "127.0.0.1"]
 
 # Application definition
 
@@ -46,12 +46,14 @@ INSTALLED_APPS = [
     "notifications.apps.NotificationsConfig",
     "rest_framework",
     "corsheaders",
+    "debug_toolbar",
 ]
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -61,7 +63,11 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "LMSSystemBackend.urls"
 CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = ("http://localhost:8081",)
+CORS_ORIGIN_WHITELIST = (
+    "http://localhost:8081",
+    "http://103.75.186.201:8081",
+    "http://localhost:3000",
+)
 
 TEMPLATES = [
     {
@@ -84,6 +90,14 @@ WSGI_APPLICATION = "LMSSystemBackend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+keepalive_kwargs = {
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 5,
+}
+
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -95,6 +109,7 @@ DATABASES = {
         "OPTIONS": {"sslmode": "require"},
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -142,3 +157,9 @@ REST_FRAMEWORK = {
     ]
 }
 AUTH_USER_MODEL = "user_profiles.UserProfile"
+
+INTERNAL_IPS = [
+    # ...
+    "127.0.0.1",
+    # ...
+]

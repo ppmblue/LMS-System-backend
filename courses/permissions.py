@@ -1,47 +1,64 @@
-from rest_framework import permissions
+from rest_framework import permissions, exceptions
 from courses.models import CourseTeacher, Course, CourseSemester, Lab
 
 
-class IsTeachingCourse(permissions.BasePermission):
-    """
-    Only allow teachers who teaching that course.
-    """
+class IsTeacherForCourse(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return (
+            CourseTeacher.objects.filter(course=obj, teacher=request.user)
+            .select_related("course", "teacher")
+            .exists()
+        )
 
-    def has_permission(self, request, view):
-        if request.user.is_authenticated and request.user.is_teacher:
-            course_pk = view.kwargs.get("course_pk")
-            semester_name = view.kwargs.get("semester_name")
-            if semester_name:
-                return CourseTeacher.objects.filter(
-                    course_semester__course__pk=course_pk,
-                    course_semester__semester_name=semester_name,
-                ).exists()
-            else:
-                return CourseTeacher.objects.filter(
-                    course_semester__course__pk=course_pk
-                ).exists()
-        else:
-            return False
+
+class CanAccessSemesterObj(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        if request.user.is_authenticated and request.user.is_teacher:
-            if isinstance(obj, Course):
-                return CourseTeacher.objects.filter(
-                    course_semester__course=obj, teacher=request.user
-                ).exists()
-            elif isinstance(obj, CourseSemester):
-                return CourseTeacher.objects.filter(
-                    course_semester=obj, teacher=request.user
-                ).exists()
-            elif isinstance(obj, CourseTeacher):
-                return CourseTeacher.objects.filter(
-                    teacher=request.user, pk=obj.pk
-                ).exists()
-            elif isinstance(obj, Lab):
-                return CourseTeacher.objects.filter(
-                    teacher=request.user, course_semester=obj.course_semester
+        course_code = view.kwargs.get("course_code")
+        user = request.user
+        if user is not None and course_code is not None:
+            return (
+                CourseTeacher.objects.filter(
+                    course__course_code=course_code, teacher=user, course_semester=obj
                 )
+                .prefetch_related("course_semester")
+                .exists()
+            )
         return False
+
+
+class CanManageLabData(permissions.BasePermission):
+
+    def has_permission(self, request, view):
+        course_code = view.kwargs.get("course_code")
+        semester_name = view.kwargs.get("semester_name")
+        user = request.user
+        if user is not None and course_code is not None and semester_name is not None:
+            return (
+                CourseTeacher.objects.filter(
+                    course__course_code=course_code,
+                    teacher=user,
+                    course_semester__semester_name=semester_name,
+                )
+                .prefetch_related("course_semester")
+                .exists()
+            )
+        return False
+
+
+class CanManageCourseData(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        if user.is_authenticated:
+            course_teacher_query = (
+                CourseTeacher.objects.filter(
+                    course__course_code=view.kwargs.get("course_code"), teacher=user
+                )
+                .prefetch_related("course_semester")
+                .exists()
+            )
+            return user.is_superuser or course_teacher_query
+        return false
 
 
 class IsLecturerOrHeadLecturer(permissions.BasePermission):
