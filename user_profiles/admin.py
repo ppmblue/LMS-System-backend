@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import UserProfile
-from courses.models import CourseTeacher, Course, CourseSemester, Lab, LearningOutcome
+from courses.models import (
+    Course,
+    Semester,
+    Class,
+    Lab,
+    LearningOutcome,
+    LabLOContribution,
+)
 
 
 class UserProfileAdmin(UserAdmin):
@@ -46,8 +53,9 @@ class UserProfileAdmin(UserAdmin):
 
 
 admin.site.register(UserProfile, UserProfileAdmin)
-admin.site.register(CourseTeacher)
 admin.site.register(Course)
-admin.site.register(CourseSemester)
+admin.site.register(Semester)
+admin.site.register(Class)
 admin.site.register(Lab)
 admin.site.register(LearningOutcome)
+admin.site.register(LabLOContribution)

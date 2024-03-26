@@ -1,5 +1,5 @@
 from rest_framework import permissions, exceptions
-from courses.models import CourseTeacher, Course, CourseSemester, Lab
+from courses.models import CourseTeacher, Course, Lab
 
 
 class IsTeacherForCourse(permissions.BasePermission):

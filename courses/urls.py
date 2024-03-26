@@ -7,53 +7,43 @@ urlpatterns = [
         "courses/<str:course_code>/", views.CourseDetail.as_view(), name="course-detail"
     ),
     path(
-        "courses/<str:course_code>/semesters",
-        views.CourseSemesterList.as_view(),
-        name="semester-list",
+        "courses/<str:course_code>/classes/",
+        views.ClassList.as_view(),
+        name="class-list",
     ),
     path(
-        "courses/<str:course_code>/semesters/<str:semester_name>",
-        views.CourseSemesterDetail.as_view(),
-        name="semester-detail",
+        "courses/<str:course_code>/classes/<str:class_code>/",
+        views.ClassDetail.as_view(),
+        name="class-detail",
     ),
     path(
-        "courses/<str:course_code>/teachers",
-        views.CourseTeacherList.as_view(),
-        name="teacher-list",
-    ),
-    path(
-        "courses/<str:course_code>/teachers/<int:pk>",
-        views.CourseTeacherDetail.as_view(),
-        name="teacher-detail",
-    ),
-    path(
-        "courses/<str:course_code>/semesters/<str:semester_name>/labs",
+        "courses/<str:course_code>/classes/<str:class_code>/labs/",
         views.LabList.as_view(),
         name="lab-list",
     ),
     path(
-        "courses/<str:course_code>/semesters/<str:semester_name>/labs/<str:lab_pk>",
+        "courses/<str:course_code>/classes/<str:class_code>/labs/<str:lab_name>/",
         views.LabDetail.as_view(),
         name="lab-detail",
     ),
     path(
-        "courses/<str:course_code>/outcomes",
+        "courses/<str:course_code>/outcomes/",
         views.LearningOutcomeList.as_view(),
         name="lo-list",
     ),
     path(
-        "courses/<str:course_code>/outcomes/<str:outcome_code>",
+        "courses/<str:course_code>/outcomes/<str:outcome_code>/",
         views.LearningOutcomeDetail.as_view(),
         name="lo-detail",
     ),
     path(
-        "courses/<str:course_code>/semesters/<str:semester_name>/labs/<str:lab_pk>/contributions",
+        "courses/<str:course_code>/classes/<str:class_code>/labs/<str:lab_name>/contributions/",
         views.LabLOList.as_view(),
-        name="lab-lo-list",
+        name="contribution-list",
     ),
     path(
-        "courses/<str:course_code>/semesters/<str:semester_name>/labs/<str:lab_pk>/contributions/<str:outcome_code>",
+        "courses/<str:course_code>/classes/<str:class_code>/labs/<str:lab_name>/contributions/<str:outcome_code>/",
         views.LabLODetail.as_view(),
-        name="lab-lo-detail",
+        name="contribution-detail",
     ),
 ]
