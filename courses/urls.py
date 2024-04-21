@@ -1,5 +1,9 @@
-from django.urls import path
+from django.urls import path, include
 from courses import views
+from rest_framework import routers
+
+router = routers.DefaultRouter()
+router.register("submission", views.SubmissionFile, basename='upload')
 
 urlpatterns = [
     path("courses/", views.CourseList.as_view(), name="course-list"),
@@ -8,8 +12,13 @@ urlpatterns = [
     ),
     path(
         "courses/<str:course_code>/classes/",
-        views.ClassList.as_view(),
-        name="class-list",
+        views.ClassListByCourse.as_view(),
+        name="class-list-by-course",
+    ),
+    path(
+        "courses/semesters",
+        views.SemesterList.as_view(),
+        name="class-semesters"  
     ),
     path(
         "courses/<str:course_code>/classes/<str:class_code>/",
@@ -46,4 +55,10 @@ urlpatterns = [
         views.LabLODetail.as_view(),
         name="contribution-detail",
     ),
+    path("", include(router.urls)),
+    path(
+        "classes",
+        views.ClassList.as_view(),
+        name="classes"
+    )
 ]

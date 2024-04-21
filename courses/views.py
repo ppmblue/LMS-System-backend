@@ -5,10 +5,12 @@ from courses.models import (
     Lab,
     LearningOutcome,
     LabLOContribution,
+    Submission
 )
-from rest_framework import exceptions, serializers, status
+from rest_framework import exceptions, serializers, status, viewsets
 from rest_framework.response import Response
-
+from rest_framework.viewsets import ViewSet
+from courses.permissions import CanAccessClass
 
 from courses.serializers import (
     CourseSerializer,
@@ -17,6 +19,7 @@ from courses.serializers import (
     LabSerializer,
     LearningOutcomeSerializer,
     LabLOContributionSerializer,
+    SubmissionSerializer
 )
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
@@ -30,7 +33,7 @@ class CourseList(generics.ListCreateAPIView):
     serializer_class = CourseSerializer
 
     def perform_create(self, serializer):
-        serializer.save(creater=self.request.user.email)
+        serializer.save(creator=self.request.user.email)
 
 
 class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -39,19 +42,7 @@ class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Course.objects.all()
     lookup_field = "course_code"
 
-    # def get_object(self):
-    #     user = self.request.user
-    #     queryset = self.get_queryset()
-    #     course_code = self.akwargs.get("course_code")
-    #     try:
-    #         obj = get_object_or_404(queryset, course_code=course_code)
-    #     except exceptions.NotFound:
-    #         raise exceptions.NotFound("The requested course does not exist.")
-    #     self.check_object_permissions(self.request, obj)
-    #     return obj
-
-
-class ClassList(generics.ListCreateAPIView):
+class ClassListByCourse(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTeacher]
     lookup_url_kwarg = ["course_code"]
     serializer_class = ClassSerializer
@@ -75,6 +66,17 @@ class ClassList(generics.ListCreateAPIView):
         serializer.save(
             course=Course.objects.get(course_code=self.kwargs.get("course_code"))
         )
+        
+class ClassList(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsTeacher, CanAccessClass]
+    serializer_class = ClassSerializer
+    
+    def get_queryset(self):
+        queryset = Class.objects.all()
+        return queryset.filter(teacher__email=self.request.user.email)
+    
+    def perform_create(self, serializer):
+        serializer.save(teacher=self.request.user.email)
 
 
 class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -94,50 +96,17 @@ class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
+    
 
-
-# class CourseTeacherList(generics.ListCreateAPIView):
-#     permission_classes = [IsAuthenticated, CanManageCourseData]
-#     lookup_url_kwarg = ["course_code"]
-#     serializer_class = CourseTeacherSerializer
-
-#     # def check_permissions(self):
-#     #     return (
-#     #         CourseTeacher.objects.filter(
-#     #             course=self.kwargs.get("course_code"), teacher=self.request.user
-#     #         )
-#     #         .select_related("teacher")
-#     #         .exists()
-#     #     )
-
-#     def get_queryset(self):
-#         return CourseTeacher.objects.filter(
-#             course__course_code=self.kwargs.get("course_code")
-#         ).prefetch_related("course_semester")
-
-#     def perform_create(self, serializer):
-#         target_course = Course.objects.get(course_code=self.kwargs.get("course_code"))
-#         serializer.save(course=target_course)
-
-
-# class CourseTeacherDetail(generics.RetrieveUpdateDestroyAPIView):
-#     permission_classes = [IsAuthenticated, CanManageCourseData]
-#     lookup_url_kwarg = ["pk", "course_code"]
-#     lookup_field = ["pk", "course__course_code"]
-#     serializer_class = CourseTeacherSerializer
-
-#     def get_object(self):
-#         course_code = self.kwargs.get("course_code")
-#         pk = self.kwargs.get("pk")
-
-#         queryset = CourseTeacher.objects.filter(
-#             course__course_code=course_code
-#         ).prefetch_related("course_semester")
-#         if not queryset.exists():
-#             raise exceptions.NotFound("The requested course does not exist")
-#         obj = get_object_or_404(queryset, pk=pk)
-#         self.check_object_permissions(self.request, obj)
-#         return obj
+class SemesterList(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SemesterSerializer
+    
+    def get_queryset(self):
+        return Semester.objects.all()
+    
+    def perform_create(self, serializer):
+        serializer.save()
 
 
 class LabList(generics.ListCreateAPIView):
@@ -228,6 +197,7 @@ class LabLOList(generics.CreateAPIView):
     def get_queryset(self):
         course_code = self.kwargs.get("course_code")
         class_code = self.kwargs.get("class_code")
+        lab_name = self.kwargs.get("lab_name")
         return LabLOContribution.objects.filter(
             class_code__class_code=class_code,
             class_code__course__course_code=course_code,
@@ -274,3 +244,27 @@ class LabLODetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
+
+class SubmissionFile(ViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SubmissionSerializer
+    
+    def create(self, request):
+        serializer = SubmissionSerializer(data=request.data)
+        
+        file = request.FILES.get('submission_file')
+        if (serializer.is_valid()):
+            class_code = serializer.validated_data.get('class_code')
+            try:
+                target_class = Class.objects.get(
+                    class_code = class_code
+                )
+            except Class.DoesNotExist as e:
+                return Response(status.HTTP_400_BAD_REQUEST)
+            
+            serializer.save(
+                class_code = target_class,
+                binaries = file
+            )
+            
+        return Response(f"Uploaded {file.name} successfully!")

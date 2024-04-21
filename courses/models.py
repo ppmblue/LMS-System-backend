@@ -10,7 +10,7 @@ class Course(models.Model):
     course_code = models.CharField(max_length=50, unique=True, null=True)
     course_name = models.CharField(max_length=255)
     department = models.CharField(max_length=100)
-    creater = models.EmailField(max_length=255)
+    creator = models.EmailField(max_length=255)
 
     class Meta:
         indexes = [
@@ -137,23 +137,12 @@ class LabLOContribution(models.Model):
         return f"{self.outcome.outcome_code}-{self.contribution_percentage} of {self.lab.lab_name}"
 
 
-# class CourseTeacher(models.Model):
-#     course = models.ForeignKey(
-#         Course,
-#         on_delete=models.CASCADE,
-#         related_name="courseteacher_course",
-#         blank=True,
-#     )
-#     TEACHER_ROLE_CHOICES = [
-#         ("Lecturer", "Lecturer"),
-#         ("HeadLecturer", "Head Lecturer"),
-#         ("TA", "Teaching Assistant"),
-#     ]
-#     role = models.CharField(max_length=100, choices=TEACHER_ROLE_CHOICES)
-#     teacher = models.ForeignKey(UserProfile, on_delete=models.CASCADE, blank=True)
-#     # course_semester = models.ManyToManyField(
-#     #     CourseSemester, related_name="courseteacher_semester"
-#     # )
-
-#     def __str__(self):
-#         return f"{self.teacher.first_name} -{self.role}"
+class Submission(models.Model):
+    class_code = models.ForeignKey(
+        Class, related_name="class_submission", on_delete=models.CASCADE
+    )
+    
+    binaries = models.FileField(upload_to="submission_file")
+    
+    def __str__(self):
+        return f"{self.class_code.class_code}-{self.binaries.name}"
