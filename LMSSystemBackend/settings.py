@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+import json
 
 
 load_dotenv()
@@ -30,7 +31,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["103.75.186.201", "127.0.0.1"]
+ALLOWED_HOSTS = ["103.56.162.106", "127.0.0.1"]
 
 # Application definition
 
@@ -68,9 +69,9 @@ MIDDLEWARE = [
 ROOT_URLCONF = "LMSSystemBackend.urls"
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
-    "http://localhost:8081",
-    "http://103.75.186.201:8081",
+    "http://localhost:8080",
     "http://localhost:3000",
+    "http://103.56.162.106:8081",
 )
 
 TEMPLATES = [
@@ -101,16 +102,17 @@ keepalive_kwargs = {
     "keepalives_count": 5,
 }
 
+db_options = os.getenv("DB_OPTIONS")
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "bkel_data",
-        "USER": "chaunhu.thesis",
+        "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": "ep-wandering-waterfall-a5cvyxpm.us-east-2.aws.neon.tech",
+        "HOST": os.getenv("DB_HOST"),
         "PORT": "5432",
-        "OPTIONS": {"sslmode": "require"},
+        "OPTIONS": json.loads(db_options) if db_options else {},
     }
 }
 
@@ -137,8 +139,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Bangkok"
 
 USE_I18N = True
 
