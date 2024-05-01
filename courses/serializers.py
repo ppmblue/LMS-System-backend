@@ -11,13 +11,14 @@ from courses.models import (
     SubmissionFile,
 )
 from user_profiles.models import UserProfile
+from django.db import transaction
+
 
 
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = [
-            "pk",
             "course_code",
             "course_name",
             "department",
@@ -79,7 +80,7 @@ class LabSerializer(serializers.ModelSerializer):
 
 
 class LearningOutcomeSerializer(serializers.ModelSerializer):
-    course = serializers.StringRelatedField(read_only=True)
+    course = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = LearningOutcome
@@ -127,15 +128,68 @@ class LabLOContributionSerializer(serializers.ModelSerializer):
 
 
 class ExerciseSerializer(serializers.ModelSerializer):
-    outcome = serializers.StringRelatedField(read_only=True)
-    lab_name = serializers.StringRelatedField(read_only=True)
-
+    outcome = LearningOutcomeSerializer(read_only=False)
+    lab_name = LabSerializer(read_only=False)
     class Meta:
         model = Exercise
         fields = "__all__"
+    
+    def validate_class_code(self,class_code):
+        try:
+            return Class.objects.get(class_code=class_code)
+        except Class.DoesNotExist:
+            raise serializers.ValidationError("This class does not exist.")
+    
+    @transaction.atomic
+    def create(self,validated_data):
+        return self._handle_exercise_data(validated_data)
 
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        class_code = validated_data.get('class_code', instance.lab_name.class_code.class_code)  # Fallback to current instance
+        target_class = self.validate_class_code(class_code)
 
-class SubmssionSerializer(serializers.ModelSerializer):
+        # Update or create the associated Outcome
+        outcome_data = validated_data.pop('outcome', None)
+        if outcome_data:
+            outcome_serializer = LearningOutcomeSerializer(instance.outcome, data=outcome_data, partial=True)
+            outcome_serializer.is_valid(raise_exception=True)
+            outcome_serializer.save(course=target_class.course)
+        else:
+            instance.outcome.course = target_class.course
+            instance.outcome.save()
+
+        # Update or create the associated Lab
+        lab_data = validated_data.pop('lab_name', None)
+        if lab_data:
+            lab_serializer = LabSerializer(instance.lab_name, data=lab_data, partial=True)
+            lab_serializer.is_valid(raise_exception=True)
+            lab_serializer.save(class_code=target_class)
+        else:
+            instance.lab_name.class_code = target_class
+            instance.lab_name.save()
+
+        # Update the exercise instance with remaining validated_data
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+    def _handle_exercise_data(self, validated_data):
+        class_code = validated_data.get('class_code')
+        target_class = self.validate_class_code(class_code)
+
+        outcome_data = validated_data.pop('outcome', {})
+        outcome, _ = LearningOutcome.objects.get_or_create(course=target_class.course, defaults=outcome_data)
+
+        lab_data = validated_data.pop('lab_name', {})
+        lab, _ = Lab.objects.get_or_create(class_code=target_class, defaults=lab_data)
+
+        exercise = Exercise.objects.create(outcome=outcome, lab_name=lab, **validated_data)
+        return exercise
+    
+
+class SubmissionSerializer(serializers.ModelSerializer):
     exercise = serializers.StringRelatedField(read_only=True)
 
     class Meta:
@@ -149,3 +203,10 @@ class SubmissionFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubmissionFile
         fields = "__all__"
+        
+    def validate_class_code(self,class_code):
+        try:
+            return Class.objects.get(class_code=class_code)
+        except Class.DoesNotExist:
+            raise serializers.ValidationError("This class does not exist.")
+    

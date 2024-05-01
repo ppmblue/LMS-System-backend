@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils.timezone import make_aware
 from .models import Submission, Exercise
 

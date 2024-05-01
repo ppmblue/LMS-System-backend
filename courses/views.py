@@ -6,10 +6,12 @@ from courses.models import (
     LearningOutcome,
     LabLOContribution,
     SubmissionFile,
+    Submission
 )
 from rest_framework import exceptions, serializers, status, viewsets
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
+from rest_framework.views import APIView
 from courses.permissions import CanAccessClass
 
 from courses.serializers import (
@@ -20,12 +22,13 @@ from courses.serializers import (
     LearningOutcomeSerializer,
     LabLOContributionSerializer,
     SubmissionFileSerializer,
+    SubmissionSerializer,
 )
 from rest_framework import generics, parsers
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from user_profiles.permissions import IsTeacher
-from .services import process_submission_file
+from .tasks import process_files_task
 import os
 
 
@@ -267,15 +270,26 @@ class UploadSubmissionFile(generics.ListCreateAPIView):
         )
 
     def create(self, request, *args, **kwargs):
+        class_code = self.kwargs.get("class_code")
+        target_class = get_object_or_404(Class, class_code=class_code)
         requested_data = request.data
         serializer = self.get_serializer(data=requested_data)
         if serializer.is_valid():
             file_obj = serializer.validated_data["file"]
             if file_obj.name.endswith("csv"):
-                path = handle_uploaded_file(file_obj)
-            class_code = self.kwargs.get("class_code")
-            target_class = get_object_or_404(Class, class_code=class_code)
-            serializer.save(class_code=target_class)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                serializer.save(class_code=target_class)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                raise serializers.ValidationError('Only CSV files are accepted.')
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+class ProcessSubmissionFile(APIView):
+    lookup_url_kwarg = ["course_code", "class_code"]
+    permission_classes = IsAuthenticated, IsTeacher
+    def post(self, request, *args, **kwargs):
+        class_code = self.kwargs.get("class_code")
+        target_course = get_object_or_404(Class, class_code = class_code)
+        process_files_task.delay(class_code)
+        return Response({'message': 'Processing started'}, status=status.HTTP_202_ACCEPTED)
+    

@@ -9,16 +9,10 @@ from django.utils import timezone
 
 
 class Course(models.Model):
-    id = models.AutoField(primary_key=True)
-    course_code = models.CharField(max_length=50, unique=True, null=True)
+    course_code = models.CharField(max_length=50, primary_key=True, null=True)
     course_name = models.CharField(max_length=255)
     department = models.CharField(max_length=100)
     creator = models.EmailField(max_length=255)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["course_name"]),
-        ]
 
     def __str__(self):
         return f"{self.course_code}-{self.course_name}"
@@ -106,7 +100,7 @@ class Lab(models.Model):
 class LearningOutcome(models.Model):
     parent_outcome = models.CharField(max_length=255, blank=True)
     outcome_code = models.CharField(max_length=50)
-    outcome_name = models.CharField(max_length=255)
+    outcome_name = models.CharField(max_length=255, blank=True)
     outcome_description = models.CharField(max_length=255, blank=True)
     threshold = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(10)], default=5
@@ -164,18 +158,14 @@ class SubmissionFile(models.Model):
 class Exercise(models.Model):
     id = models.IntegerField(primary_key=True)
     exercise_code = models.CharField(max_length=50, null=True)
-    description = models.TextField(null=True)
-    url = models.URLField(null=True)
-    outcome = models.ForeignKey(
-        LearningOutcome, related_name="exercises", on_delete=models.CASCADE, null=True
-    )
-    lab_name = (
-        models.ForeignKey(
-            Lab, related_name="exercises", on_delete=models.CASCADE, null=True
-        ),
-    )
-    max_time = models.DurationField(null=True)
-    max_submit = models.IntegerField(null=True)
+    exercise_name = models.TextField(blank=True)
+    url = models.URLField(blank=True)
+    outcome = models.CharField(max_length=50,blank=True)
+    lab_name = models.ForeignKey(Lab, null=True)
+    class_code = models.CharField()
+    course_code = models.CharField(max_length=50,db_index=True),
+    # max_time = models.DurationField(null=True)
+    # max_submit = models.IntegerField(null=True)
     level = models.IntegerField(
         choices=((1, "Easy"), (2, "Medium"), (3, "Hard")), null=True
     )

@@ -50,9 +50,14 @@ urlpatterns = [
         name="contribution-detail",
     ),
     path(
-        "<str:course_code>/classes/<str:class_code>/submissions/",
+        "<str:course_code>/classes/<str:class_code>/submissions/upload",
         views.UploadSubmissionFile.as_view(),
         name="upload-submission",
+    ),
+    path(
+        "<str:course_code>/classes/<str:class_code>/submissions/process",
+        views.ProcessSubmissionFile.as_view(),
+        name="process-submission",
     ),
     # path("", include(router.urls)),
     # path("classes", views.ClassList.as_view(), name="classes"),
