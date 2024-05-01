@@ -1,6 +1,9 @@
 from django.db import models
 from user_profiles.models import UserProfile
+
+# from students.models import StudentProfile
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.utils import timezone
 
 # from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -137,12 +140,62 @@ class LabLOContribution(models.Model):
         return f"{self.outcome.outcome_code}-{self.contribution_percentage} of {self.lab.lab_name}"
 
 
-class Submission(models.Model):
+def get_submission_file_upload_path(instance, filename):
+    parts = instance.class_code.class_code.split("_")
+    semester = parts[0]  # "20231"
+    course_code = parts[1]  # "CO2003"
+    class_code = parts[2]  # "L01"
+
+    # Construct the path as "course_code/semester/class_code/filename"
+    return f"submission_files/{course_code}/{semester}/{class_code}/{filename}"
+
+
+class SubmissionFile(models.Model):
+    file = models.FileField(upload_to=get_submission_file_upload_path)
     class_code = models.ForeignKey(
-        Class, related_name="class_submission", on_delete=models.CASCADE
+        "Class", related_name="submission_files", on_delete=models.CASCADE
     )
-    
-    binaries = models.FileField(upload_to="submission_file")
-    
+    uploaded_at = models.DateTimeField(default=timezone.now)
+
     def __str__(self):
-        return f"{self.class_code.class_code}-{self.binaries.name}"
+        return f"{self.file.name} - {self.class_code.class_code}"
+
+
+class Exercise(models.Model):
+    id = models.IntegerField(primary_key=True)
+    exercise_code = models.CharField(max_length=50, null=True)
+    description = models.TextField(null=True)
+    url = models.URLField(null=True)
+    outcome = models.ForeignKey(
+        LearningOutcome, related_name="exercises", on_delete=models.CASCADE, null=True
+    )
+    lab_name = (
+        models.ForeignKey(
+            Lab, related_name="exercises", on_delete=models.CASCADE, null=True
+        ),
+    )
+    max_time = models.DurationField(null=True)
+    max_submit = models.IntegerField(null=True)
+    level = models.IntegerField(
+        choices=((1, "Easy"), (2, "Medium"), (3, "Hard")), null=True
+    )
+
+    def __str__(self):
+        return f"{self.id} - {self.outcome.outcome_code}"
+
+
+class Submission(models.Model):
+    id = models.CharField(primary_key=True, max_length=255)
+    exercise = models.ForeignKey(
+        Exercise,
+        related_name="submissions",  # Corrected related_name to 'submissions'
+        on_delete=models.CASCADE,
+    )
+    student = models.IntegerField()
+    score = models.DecimalField(max_digits=5, decimal_places=2)
+    time_taken = models.DurationField()
+    started_time = models.DateTimeField()
+    submitted_time = models.DateTimeField()
+
+    def __str__(self):
+        return f"Submission {self.pk} for Exercise {self.exercise.id} by Student {self.student}"

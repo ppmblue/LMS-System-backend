@@ -116,6 +116,8 @@ DATABASES = {
     }
 }
 
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -147,8 +149,12 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
-
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "LMSSystemBackend", "site_static")]
+STATIC_ROOT = os.path.join(BASE_DIR, "LMSSystemBackend", "static")
 STATIC_URL = "static/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "LMSSystemBackend", "media")
+MEDIA_URL = "/media/"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

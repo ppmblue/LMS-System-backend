@@ -5,7 +5,7 @@ from courses.models import (
     Lab,
     LearningOutcome,
     LabLOContribution,
-    Submission
+    SubmissionFile,
 )
 from rest_framework import exceptions, serializers, status, viewsets
 from rest_framework.response import Response
@@ -19,12 +19,14 @@ from courses.serializers import (
     LabSerializer,
     LearningOutcomeSerializer,
     LabLOContributionSerializer,
-    SubmissionSerializer
+    SubmissionFileSerializer,
 )
-from rest_framework import generics
+from rest_framework import generics, parsers
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from user_profiles.permissions import IsTeacher
+from .services import process_submission_file
+import os
 
 
 class CourseList(generics.ListCreateAPIView):
@@ -41,6 +43,7 @@ class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CourseSerializer
     queryset = Course.objects.all()
     lookup_field = "course_code"
+
 
 class ClassListByCourse(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTeacher]
@@ -66,15 +69,16 @@ class ClassListByCourse(generics.ListCreateAPIView):
         serializer.save(
             course=Course.objects.get(course_code=self.kwargs.get("course_code"))
         )
-        
+
+
 class ClassList(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsTeacher, CanAccessClass]
     serializer_class = ClassSerializer
-    
+
     def get_queryset(self):
         queryset = Class.objects.all()
         return queryset.filter(teacher__email=self.request.user.email)
-    
+
     def perform_create(self, serializer):
         serializer.save(teacher=self.request.user.email)
 
@@ -96,15 +100,15 @@ class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
-    
+
 
 class SemesterList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SemesterSerializer
-    
+
     def get_queryset(self):
         return Semester.objects.all()
-    
+
     def perform_create(self, serializer):
         serializer.save()
 
@@ -245,26 +249,33 @@ class LabLODetail(generics.RetrieveUpdateDestroyAPIView):
         self.check_object_permissions(self.request, obj)
         return obj
 
-class SubmissionFile(ViewSet):
-    permission_classes = [IsAuthenticated]
-    serializer_class = SubmissionSerializer
-    
-    def create(self, request):
-        serializer = SubmissionSerializer(data=request.data)
-        
-        file = request.FILES.get('submission_file')
-        if (serializer.is_valid()):
-            class_code = serializer.validated_data.get('class_code')
-            try:
-                target_class = Class.objects.get(
-                    class_code = class_code
-                )
-            except Class.DoesNotExist as e:
-                return Response(status.HTTP_400_BAD_REQUEST)
-            
-            serializer.save(
-                class_code = target_class,
-                binaries = file
-            )
-            
-        return Response(f"Uploaded {file.name} successfully!")
+
+class UploadSubmissionFile(generics.ListCreateAPIView):
+    queryset = SubmissionFile.objects.all()
+    lookup_url_kwarg = ["course_code", "class_code"]
+    permission_classes = IsAuthenticated, IsTeacher
+    serializer_class = SubmissionFileSerializer
+    parser_classes = (parsers.MultiPartParser, parsers.FileUploadParser)
+
+    def get_queryset(self):
+        class_code = self.kwargs.get("class_code")
+        return (
+            super()
+            .get_queryset()
+            .filter(class_code__class_code=class_code)
+            .select_related("class_code")
+        )
+
+    def create(self, request, *args, **kwargs):
+        requested_data = request.data
+        serializer = self.get_serializer(data=requested_data)
+        if serializer.is_valid():
+            file_obj = serializer.validated_data["file"]
+            if file_obj.name.endswith("csv"):
+                path = handle_uploaded_file(file_obj)
+            class_code = self.kwargs.get("class_code")
+            target_class = get_object_or_404(Class, class_code=class_code)
+            serializer.save(class_code=target_class)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -23,7 +23,7 @@ from user_profiles.views import MyTokenObtainPairView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
-    path("api/", include("courses.urls")),
+    path("api/courses/", include("courses.urls")),
     path("__debug__/", include("debug_toolbar.urls")),
     # path('api/notifications', include('notifications.urls')),
     path("accounts/", include("user_profiles.urls")),

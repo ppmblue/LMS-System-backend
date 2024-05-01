@@ -6,7 +6,9 @@ from courses.models import (
     Semester,
     LearningOutcome,
     LabLOContribution,
-    Submission
+    Exercise,
+    Submission,
+    SubmissionFile,
 )
 from user_profiles.models import UserProfile
 
@@ -124,9 +126,26 @@ class LabLOContributionSerializer(serializers.ModelSerializer):
             )
 
 
-class SubmissionSerializer(serializers.ModelSerializer):
-    submission_file = serializers.FileField(source='binaries')
-    
+class ExerciseSerializer(serializers.ModelSerializer):
+    outcome = serializers.StringRelatedField(read_only=True)
+    lab_name = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Exercise
+        fields = "__all__"
+
+
+class SubmssionSerializer(serializers.ModelSerializer):
+    exercise = serializers.StringRelatedField(read_only=True)
+
     class Meta:
         model = Submission
-        fields = ['class_code', 'submission_file']
+        fields = "__all__"
+
+
+class SubmissionFileSerializer(serializers.ModelSerializer):
+    class_code = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = SubmissionFile
+        fields = "__all__"
