@@ -146,3 +146,15 @@ class Submission(models.Model):
     
     def __str__(self):
         return f"{self.class_code.class_code}-{self.binaries.name}"
+    
+class SubmissionData(models.Model):
+    last_name = models.CharField(max_length=100, blank=True)
+    first_name = models.CharField(max_length=100, blank=True)
+    student_id = models.IntegerField()
+    started_time = models.CharField(max_length=100, blank=True)
+    end_time = models.CharField(max_length=100, blank=True)
+    grade = models.FloatField()
+    question_id = models.IntegerField()
+    
+    def __str__(self):
+        return str(self.student_id)

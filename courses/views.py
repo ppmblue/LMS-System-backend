@@ -5,7 +5,7 @@ from courses.models import (
     Lab,
     LearningOutcome,
     LabLOContribution,
-    Submission
+    SubmissionData
 )
 from rest_framework import exceptions, serializers, status, viewsets
 from rest_framework.response import Response
@@ -25,7 +25,6 @@ from rest_framework import generics
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from user_profiles.permissions import IsTeacher
-
 
 class CourseList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTeacher]
@@ -251,9 +250,13 @@ class SubmissionFile(ViewSet):
     
     def create(self, request):
         serializer = SubmissionSerializer(data=request.data)
-        
         file = request.FILES.get('submission_file')
+        
+        print('Request ', request.data, file.name)
         if (serializer.is_valid()):
+            if not '.csv' in file.name:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+            
             class_code = serializer.validated_data.get('class_code')
             try:
                 target_class = Class.objects.get(
@@ -267,4 +270,50 @@ class SubmissionFile(ViewSet):
                 binaries = file
             )
             
-        return Response(f"Uploaded {file.name} successfully!")
+            # Process file
+            self.processFile(file)
+            
+            return Response(f"Uploaded {file.name} successfully!")
+            
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+    def processFile(self, file):
+        try: 
+            file_data = file.read().decode('utf-8')
+            lines = file_data.split('\r\n')
+            
+            submissions = []
+            for line in lines[1:]:
+                fields = line.split(',')
+                if (len(fields) < 10): continue
+                
+                submit = SubmissionData()
+                submit.last_name = fields[0]
+                submit.first_name = fields[1]
+                submit.student_id = self.get_integer_value(fields[2], 2012715)
+                submit.started_time = fields[4]
+                submit.end_time = fields[5]
+                submit.grade = self.get_float_value(fields[7])
+                submit.question_id = self.get_integer_value(fields[9], 0)
+                submissions.append(submit)
+                
+            # Save into database
+            print('Length ', len(submissions))
+            SubmissionData.objects.bulk_create(submissions, batch_size=100)
+            
+        except Exception as e:
+            raise e
+        
+    def get_integer_value(self, str, default_val):
+        try:
+            int_value = int(str)
+            return int_value
+        except (TypeError, ValueError):
+            return default_val
+        
+    def get_float_value(self, str):
+        try:
+            float_val = float(str)
+            return float_val
+        except (TypeError, ValueError):
+            return 0

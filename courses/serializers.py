@@ -6,7 +6,8 @@ from courses.models import (
     Semester,
     LearningOutcome,
     LabLOContribution,
-    Submission
+    Submission,
+    SubmissionData
 )
 from user_profiles.models import UserProfile
 
