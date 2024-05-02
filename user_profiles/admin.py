@@ -8,6 +8,8 @@ from courses.models import (
     Lab,
     LearningOutcome,
     LabLOContribution,
+    Exercise,
+    Submission,
 )
 
 
@@ -59,3 +61,5 @@ admin.site.register(Class)
 admin.site.register(Lab)
 admin.site.register(LearningOutcome)
 admin.site.register(LabLOContribution)
+admin.site.register(Exercise)
+admin.site.register(Submission)
