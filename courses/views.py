@@ -24,7 +24,8 @@ from courses.serializers import (
     LearningOutcomeSerializer,
     LabLOContributionSerializer,
     SubmissionFormSerializer,
-    ExerciseFormSerializer
+    ExerciseFormSerializer,
+    ExerciseSerializer
 )
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
@@ -200,6 +201,37 @@ class LearningOutcomeDetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
+    
+class ExerciseList(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExerciseSerializer
+    lookup_url_kwarg = ["class_code"]
+
+    def get_queryset(self):
+        class_code = self.kwargs.get("class_code")
+        
+        return Exercise.objects.filter(
+            class_code=class_code
+        )
+
+    def perform_create(self, serializer):
+        target_course = self.kwargs.get("class_code")
+        serializer.save(class_code=target_course)
+
+
+class ExerciseDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExerciseSerializer
+    lookup_url_kwarg = ["class_code", "exercise_id"]
+
+    def get_object(self):
+        obj = get_object_or_404(
+            Exercise.objects.all(),
+            class_code=self.kwargs.get("class_code"),
+            id=int(self.kwargs.get("exercise_id"))
+        )
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 
 class LabLOList(generics.CreateAPIView):
@@ -302,13 +334,24 @@ class ExerciseUploadForm(ViewSet):
                 if Exercise.objects.filter(id=new_id).exists():
                     continue
                 
+                # Validate outcome. Create new outcome if not existed
+                outcome_code = f"{fields[7]}.0" if len(str(fields[7])) <= 5 else str(fields[7])
+                course_code = target_class.course.course_code
+                outcome = LearningOutcome()
+                if not (LearningOutcome.objects.filter(outcome_code=outcome_code, course__course_code=course_code).exists()):
+                    outcome = LearningOutcome(outcome_code=outcome_code, course=target_class.course)
+                    outcome.parent_outcome = outcome_code[0:6]
+                    outcome.save()
+                else:
+                    outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course__course_code=course_code)
+                
                 exercise = Exercise()
                 exercise.id = self.get_integer_value(str(fields[6]).split('id=')[1], 0)
                 exercise.exercise_code = fields[2]
                 exercise.exercise_name = str(fields[3]).split(']')[1].strip()
                 exercise.url = fields[6]
-                exercise.outcome = f"{fields[7]}.0" if len(str(fields[7])) <= 5 else str(fields[7])
-                exercise.lab_name = Lab.objects.get(lab_name=f"{fields[0]}-{str(fields[1]).split('lab')[0].lower()}")
+                exercise.outcome = outcome
+                exercise.lab = Lab.objects.get(lab_name=f"{fields[0]}-{str(fields[1]).split('lab')[0].lower()}")
                 exercise.class_code = target_class.class_code
                 exercise.course_code = target_class.course.course_code
                 exercise.topic = fields[4]
@@ -387,14 +430,16 @@ class SubmissionUploadForm(ViewSet):
                     exercise.save()
                 else:
                     exercise = Exercise.objects.get(id=question_id)
-                    
+                
+                start_time = self.convertDate(str(fields[4]))
+                end_time = self.convertDate(str(fields[5]))
                 submit = Submission()
                 submit.student = student
                 submit.exercise = exercise
                 submit.score = self.get_float_value(fields[7])
-                submit.time_taken = self.calculateTime(str(fields[6]))
-                submit.started_time = self.convertDate(str(fields[4]))
-                submit.submitted_time = self.convertDate(str(fields[5]))
+                submit.time_taken = end_time - start_time
+                submit.started_time = start_time
+                submit.submitted_time = end_time
                 submissions.append(submit)
                 
             # Save into database
@@ -435,22 +480,22 @@ class SubmissionUploadForm(ViewSet):
         return date_obj
     
     # Convert 'Time taken' to timedelta
-    def calculateTime(self, time):
-        temp = time.split(' ')
-        result = {
-            'day': 0,
-            'hour': 0,
-            'min': 0,
-            'sec': 0
-        }
-        for x in range(1, len(temp), 2):
-            typ = temp[x]
-            if 'day' in typ:
-                result['day'] = int(temp[x-1])
-            elif 'hour' in typ:
-                result['hour'] = int(temp[x-1])
-            elif 'min' in typ:
-                result['min'] = int(temp[x-1])
-            else:
-                result['sec'] = int(temp[x-1])
-        return timedelta(days=result['day'], hours=result['hour'], minutes=result['min'], seconds=result['sec'])
+    # def calculateTime(self, time):
+    #     temp = time.split(' ')
+    #     result = {
+    #         'day': 0,
+    #         'hour': 0,
+    #         'min': 0,
+    #         'sec': 0
+    #     }
+    #     for x in range(1, len(temp), 2):
+    #         typ = temp[x]
+    #         if 'day' in typ:
+    #             result['day'] = int(temp[x-1])
+    #         elif 'hour' in typ:
+    #             result['hour'] = int(temp[x-1])
+    #         elif 'min' in typ:
+    #             result['min'] = int(temp[x-1])
+    #         else:
+    #             result['sec'] = int(temp[x-1])
+    #     return timedelta(days=result['day'], hours=result['hour'], minutes=result['min'], seconds=result['sec'])

@@ -6,7 +6,8 @@ from courses.models import (
     Semester,
     LearningOutcome,
     LabLOContribution,
-    UploadForm
+    UploadForm,
+    Exercise
 )
 from user_profiles.models import UserProfile
 
@@ -137,3 +138,17 @@ class ExerciseFormSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadForm
         fields = ['class_code', 'exercise_file']
+        
+class ExerciseSerializer(serializers.ModelSerializer):
+    lab = serializers.SlugRelatedField(
+        queryset=Lab.objects.filter(),
+        slug_field='lab_name'
+    )
+    outcome = serializers.SlugRelatedField(
+        queryset=LearningOutcome.objects.filter(),
+        slug_field='outcome_code'
+    )
+        
+    class Meta:
+        model = Exercise
+        fields = ['id', 'exercise_code', 'exercise_name', 'class_code', 'level', 'topic', 'lab', 'outcome', 'url']

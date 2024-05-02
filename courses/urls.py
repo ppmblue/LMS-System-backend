@@ -61,5 +61,15 @@ urlpatterns = [
         "classes",
         views.ClassList.as_view(),
         name="classes"
-    )
+    ),
+    path(
+        "classes/<str:class_code>/exercises/",
+        views.ExerciseList.as_view(),
+        name="exercise-list-by-class",
+    ),
+    path(
+        "classes/<str:class_code>/exercises/<str:exercise_id>/",
+        views.ExerciseDetail.as_view(),
+        name="exercise-detail",
+    ),
 ]

@@ -104,7 +104,7 @@ class Lab(models.Model):
 class LearningOutcome(models.Model):
     parent_outcome = models.CharField(max_length=255, blank=True)
     outcome_code = models.CharField(max_length=50)
-    outcome_name = models.CharField(max_length=255)
+    outcome_name = models.CharField(max_length=255, blank=True)
     outcome_description = models.CharField(max_length=255, blank=True)
     threshold = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(10)], default=5
@@ -154,8 +154,8 @@ class Exercise(models.Model):
     exercise_code = models.CharField(max_length=50, null=True)
     exercise_name = models.TextField(blank=True)
     url = models.URLField(blank=True)
-    outcome = models.CharField(max_length=50,blank=True)
-    lab_name = models.ForeignKey(Lab, null=True, on_delete=models.CASCADE)
+    outcome = models.ForeignKey(LearningOutcome, null=True, on_delete=models.SET_NULL)
+    lab = models.ForeignKey(Lab, null=True, on_delete=models.CASCADE)
     class_code = models.CharField()
     course_code = models.CharField(max_length=50,db_index=True),
     topic = models.CharField(max_length=100,blank=True)
