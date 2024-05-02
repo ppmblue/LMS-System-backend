@@ -1,5 +1,6 @@
 from django.db import models
 from user_profiles.models import UserProfile
+from students.models import Student
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 
 # from django.core.validators import MinValueValidator, MaxValueValidator
@@ -137,24 +138,50 @@ class LabLOContribution(models.Model):
         return f"{self.outcome.outcome_code}-{self.contribution_percentage} of {self.lab.lab_name}"
 
 
-class Submission(models.Model):
+class UploadForm(models.Model):
     class_code = models.ForeignKey(
         Class, related_name="class_submission", on_delete=models.CASCADE
     )
     
-    binaries = models.FileField(upload_to="submission_file")
+    binaries = models.FileField(upload_to="file_storage")
     
     def __str__(self):
         return f"{self.class_code.class_code}-{self.binaries.name}"
     
-class SubmissionData(models.Model):
-    last_name = models.CharField(max_length=100, blank=True)
-    first_name = models.CharField(max_length=100, blank=True)
-    student_id = models.IntegerField()
-    started_time = models.CharField(max_length=100, blank=True)
-    end_time = models.CharField(max_length=100, blank=True)
-    grade = models.FloatField()
-    question_id = models.IntegerField()
+    
+class Exercise(models.Model):
+    id = models.IntegerField(primary_key=True)
+    exercise_code = models.CharField(max_length=50, null=True)
+    exercise_name = models.TextField(blank=True)
+    url = models.URLField(blank=True)
+    outcome = models.CharField(max_length=50,blank=True)
+    lab_name = models.ForeignKey(Lab, null=True, on_delete=models.CASCADE)
+    class_code = models.CharField()
+    course_code = models.CharField(max_length=50,db_index=True),
+    topic = models.CharField(max_length=100,blank=True)
+    level = models.IntegerField(
+        choices=((1, "Easy"), (2, "Medium"), (3, "Hard")), null=True
+    )
+
+    def __str__(self):
+        return f"{self.id} - {self.outcome.outcome_code}"
+    
+class Submission(models.Model):    
+    exercise = models.ForeignKey(
+        Exercise,
+        null=True,
+        related_name="submissions",  # Corrected related_name to 'submissions'
+        on_delete=models.CASCADE,
+    )
+    student = models.ForeignKey(
+        Student,
+        null=True,
+        on_delete=models.CASCADE
+    )
+    score = models.FloatField()
+    time_taken = models.DurationField(null=True)
+    started_time = models.DateTimeField(null=True)
+    submitted_time = models.DateTimeField(null=True)
     
     def __str__(self):
-        return str(self.student_id)
+        return f"Submission {self.pk} for Exercise {self.exercise.id} by Student {self.student}"

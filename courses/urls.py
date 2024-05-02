@@ -3,7 +3,8 @@ from courses import views
 from rest_framework import routers
 
 router = routers.DefaultRouter()
-router.register("submission", views.SubmissionFile, basename='upload')
+router.register("submission", views.SubmissionUploadForm, basename='upload')
+router.register("exercise", views.ExerciseUploadForm, basename='upload')
 
 urlpatterns = [
     path("courses/", views.CourseList.as_view(), name="course-list"),
