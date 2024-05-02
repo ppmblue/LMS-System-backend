@@ -164,7 +164,7 @@ class Exercise(models.Model):
     )
 
     def __str__(self):
-        return f"{self.id} - {self.outcome.outcome_code}"
+        return f"{self.id} - {self.outcome}"
     
 class Submission(models.Model):    
     exercise = models.ForeignKey(
