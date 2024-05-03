@@ -13,8 +13,7 @@ from rest_framework import exceptions, serializers, status, viewsets
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from courses.permissions import CanAccessClass
-from datetime import datetime, timedelta
-import base64
+from courses.tasks import process_submission_file_task
 
 from courses.serializers import (
     CourseSerializer,
@@ -393,109 +392,17 @@ class SubmissionUploadForm(ViewSet):
             except Class.DoesNotExist as e:
                 return Response(status.HTTP_400_BAD_REQUEST)
             
+            # Save file in storage
+            new_file = serializer.save(
+                class_code = target_class,
+                binaries = file
+            )
+            
             # Process file
-            self.processFile(target_class, file)
+            process_submission_file_task.apply_async(args = [
+                target_class.class_code, file.name, new_file.id
+            ])
             
             return Response(f"Uploaded submission file {file.name} successfully!")
             
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
-    def processFile(self, target_class, file):
-        try: 
-            file_data = file.read().decode('utf-8')
-            lines = file_data.split('\r\n')
-            
-            submissions = []
-            for line in lines[1:]:
-                fields = line.split(',')
-                if (len(fields) != 10): continue
-                
-                # Validate student. Create new student if not existed
-                student_id = self.get_integer_value(fields[2], 2012715)
-                student = Student()
-                if not (Student.objects.filter(student_id=student_id).exists()):
-                    student = Student(student_id=student_id)
-                    student.last_name = fields[0]
-                    student.first_name = fields[1]
-                    student.secured_student_id = base64.urlsafe_b64encode(str(student_id).encode())
-                    student.save()
-                else:
-                    student = Student.objects.get(student_id=student_id)
-                    
-                # Validate exercise. Create new exercise if not existed
-                question_id = self.get_integer_value(fields[9], 0)
-                exercise = Exercise()
-                if not (Exercise.objects.filter(id=question_id).exists()):
-                    exercise = Exercise(id=question_id, class_code=target_class.class_code)
-                    exercise.save()
-                else:
-                    exercise = Exercise.objects.get(id=question_id)
-                
-                start_time = self.convertDate(str(fields[4]))
-                end_time = self.convertDate(str(fields[5]))
-                submit = Submission()
-                submit.student = student
-                submit.exercise = exercise
-                submit.score = self.get_float_value(fields[7])
-                submit.time_taken = end_time - start_time
-                submit.started_time = start_time
-                submit.submitted_time = end_time
-                submissions.append(submit)
-                
-            # Save into database
-            print('Length ', len(submissions))
-            Submission.objects.bulk_create(submissions, batch_size=100)
-            
-        except Exception as e:
-            raise e
-        
-    def get_integer_value(self, str, default_val):
-        try:
-            int_value = int(str)
-            return int_value
-        except (TypeError, ValueError):
-            return default_val
-        
-    def get_float_value(self, str):
-        try:
-            float_val = float(str)
-            return float_val
-        except (TypeError, ValueError):
-            return 0
-        
-    # Convert month
-    def convertMonth(self, month):
-        map = { "January": "01", "February": "02", "March": "03", "April": "04", "May": "05", "June": "06",
-                "July": "07", "August": "08", "September": "09", "October": "10", "November": "11", "December": "12" }
-        for x in map.keys():
-            month = month.replace(x, map[x])
-        return month
-
-    # Convert date
-    def convertDate(self, date_str):
-        date_str = self.convertMonth(date_str)
-        date_format = '%d %m %Y %I:%M %p'
-
-        date_obj = datetime.strptime(date_str, date_format)
-        return date_obj
-    
-    # Convert 'Time taken' to timedelta
-    # def calculateTime(self, time):
-    #     temp = time.split(' ')
-    #     result = {
-    #         'day': 0,
-    #         'hour': 0,
-    #         'min': 0,
-    #         'sec': 0
-    #     }
-    #     for x in range(1, len(temp), 2):
-    #         typ = temp[x]
-    #         if 'day' in typ:
-    #             result['day'] = int(temp[x-1])
-    #         elif 'hour' in typ:
-    #             result['hour'] = int(temp[x-1])
-    #         elif 'min' in typ:
-    #             result['min'] = int(temp[x-1])
-    #         else:
-    #             result['sec'] = int(temp[x-1])
-    #     return timedelta(days=result['day'], hours=result['hour'], minutes=result['min'], seconds=result['sec'])
