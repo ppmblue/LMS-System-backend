@@ -13,10 +13,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
-            "phone_number",
             "is_teacher",
+            "phone_number",
+            "student_id",
+            "major",
         ]
         read_only_fields = ["username", "email", "is_teacher"]
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = UserProfile.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -29,4 +38,4 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["email"] = user.email
         # ...
 
-        return token
+        return {"token": token.key, "user": user}
