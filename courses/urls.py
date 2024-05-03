@@ -72,4 +72,9 @@ urlpatterns = [
         views.ExerciseDetail.as_view(),
         name="exercise-detail",
     ),
+    path(
+        "classes/<str:class_code>/submissions/",
+        views.SubmissionList.as_view(),
+        name="submission-list-by-class",
+    )
 ]

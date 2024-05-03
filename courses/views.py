@@ -24,7 +24,8 @@ from courses.serializers import (
     LabLOContributionSerializer,
     SubmissionFormSerializer,
     ExerciseFormSerializer,
-    ExerciseSerializer
+    ExerciseSerializer,
+    SubmissionSerializer
 )
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
@@ -406,3 +407,28 @@ class SubmissionUploadForm(ViewSet):
             return Response(f"Uploaded submission file {file.name} successfully!")
             
         return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+class SubmissionList(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SubmissionSerializer
+    lookup_url_kwarg = ["class_code"]
+
+    def get_queryset(self):
+        class_code = self.kwargs.get("class_code")
+        page = self.request.query_params.get('page')
+        items = self.request.query_params.get('items')
+        
+        if (page and items):
+            num_page = int(page)
+            if (num_page == 1):
+                return Submission.objects.filter(
+                    exercise__class_code=class_code
+                )[:(int(page) * int(items))]
+            
+            return Submission.objects.filter(
+                exercise__class_code=class_code
+            )[((num_page-1) * int(items)):(num_page * int(items))]
+        
+        return Submission.objects.filter(
+            exercise__class_code=class_code
+        )[:100]

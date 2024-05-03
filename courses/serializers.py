@@ -7,9 +7,11 @@ from courses.models import (
     LearningOutcome,
     LabLOContribution,
     UploadForm,
-    Exercise
+    Exercise,
+    Submission
 )
 from user_profiles.models import UserProfile
+from students.models import Student
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -45,6 +47,11 @@ class ClassSerializer(serializers.ModelSerializer):
         queryset=UserProfile.objects.filter(),
         slug_field="email",
     )
+    
+    num_of_submissions = serializers.SerializerMethodField('count_submissions')
+    
+    def count_submissions(self, obj):
+        return Submission.objects.filter(exercise__class_code=obj.class_code).count()
 
     class Meta:
         model = Class
@@ -57,6 +64,7 @@ class ClassSerializer(serializers.ModelSerializer):
             "role",
             "class_code",
             "group",
+            "num_of_submissions"
         )
         lookup_field = ["course", "class_code"]
         read_only_fields = ["class_code"]
@@ -152,3 +160,43 @@ class ExerciseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exercise
         fields = ['id', 'exercise_code', 'exercise_name', 'class_code', 'level', 'topic', 'lab', 'outcome', 'url']
+        
+class SubmissionSerializer(serializers.ModelSerializer):
+    exercise = serializers.SlugRelatedField(
+        queryset=Exercise.objects.filter(),
+        slug_field='id'
+    )
+    student = serializers.SlugRelatedField(
+        queryset=Student.objects.filter(),
+        slug_field='secured_student_id'
+    )
+    started_time = serializers.SerializerMethodField('get_format_starttime')
+    submitted_time = serializers.SerializerMethodField('get_format_endtime')
+    time_taken = serializers.SerializerMethodField('get_format_duration')
+    
+    def get_format_starttime(self, obj):
+        return obj.started_time.strftime("%d/%m/%Y, %H:%M:%S")
+    
+    def get_format_endtime(self, obj):
+        return obj.started_time.strftime("%d/%m/%Y, %H:%M:%S")
+    
+    def get_format_duration(self, obj):
+        days = obj.time_taken.days
+        seconds = obj.time_taken.seconds
+
+        minutes = seconds // 60
+
+        hours = minutes // 60
+        hour_str = f'{hours} hours' if hours > 1 else '1 hour' if hours == 1 else ''
+        minutes = minutes % 60
+        min_str = f'{minutes} mins' if minutes > 1 else '1 min' if minutes == 1 else '0 min'
+
+        dur_string = f'{hour_str} {min_str}' if hour_str != '' else min_str
+        if days:
+            day_str = 'days' if days > 1 else 'day'
+            dur_string = f'{days} {day_str} {dur_string}'
+        return dur_string
+    
+    class Meta:
+        model = Submission
+        fields = ['exercise', 'student', 'score', 'time_taken', 'started_time', 'submitted_time']
