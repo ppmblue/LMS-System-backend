@@ -339,7 +339,7 @@ class ExerciseUploadForm(ViewSet):
                 outcome = LearningOutcome()
                 if not (LearningOutcome.objects.filter(outcome_code=outcome_code, course__course_code=course_code).exists()):
                     outcome = LearningOutcome(outcome_code=outcome_code, course=target_class.course)
-                    outcome.parent_outcome = outcome_code[0:6]
+                    outcome.parent_outcome = outcome_code[0:5]
                     outcome.save()
                 else:
                     outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course__course_code=course_code)

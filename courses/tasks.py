@@ -1,7 +1,9 @@
 from courses.models import (
     Exercise,
     Submission,
-    UploadForm
+    UploadForm,
+    Enrollment,
+    Class
 )
 from students.models import Student
 from celery import shared_task
@@ -25,6 +27,9 @@ def process_submission_file_task(class_code, file_name, file_id):
         print('File info: ', full_path, len(lines))
         
         submissions = []
+        target_class = Class.objects.get(
+            class_code = class_code
+        )
         for line in lines[1:]:
             fields = line.split(',')
             if (len(fields) != 10): continue
@@ -40,6 +45,11 @@ def process_submission_file_task(class_code, file_name, file_id):
                 student.save()
             else:
                 student = Student.objects.get(student_id=student_id)
+                
+            # Validate enrollment. Create new enrollment if not existed
+            if not (Enrollment.objects.filter(student__student_id=student_id, class_code__id=target_class.id).exists()):
+                # Enroll student into class
+                Enrollment(class_code=target_class, student=student).save()
                 
             # Validate exercise. Create new exercise if not existed
             question_id = ProcessFileHelper.get_integer_value(fields[9], 0)

@@ -185,3 +185,15 @@ class Submission(models.Model):
     
     def __str__(self):
         return f"Submission {self.pk} for Exercise {self.exercise.id} by Student {self.student}"
+    
+class Enrollment(models.Model):
+    student = models.ForeignKey(
+        Student,
+        related_name="enroll_student",
+        on_delete=models.CASCADE
+    )
+    class_code = models.ForeignKey(
+        Class,
+        related_name="enroll_class",
+        on_delete=models.CASCADE
+    )
