@@ -11,6 +11,7 @@ from courses.models import (
     Exercise,
     Submission,
 )
+from students.models import Student
 
 
 class UserProfileAdmin(UserAdmin):
@@ -63,3 +64,4 @@ admin.site.register(LearningOutcome)
 admin.site.register(LabLOContribution)
 admin.site.register(Exercise)
 admin.site.register(Submission)
+admin.site.register(Student)

@@ -10,7 +10,7 @@ class UserProfile(AbstractUser):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     is_teacher = models.BooleanField(default=False)
     # Additional fields for students
-    student_id = models.CharField(max_length=20, blank=True, null=True)
+    student_id = models.CharField(max_length=20, blank=True, unique=True)
     major = models.CharField(max_length=50, blank=True, null=True)
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["first_name", "email", "last_name"]
