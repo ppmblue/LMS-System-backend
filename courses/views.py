@@ -6,12 +6,11 @@ from courses.models import (
     LearningOutcome,
     LabLOContribution,
     Exercise,
-    Submission
+    Submission,
+    UploadForm,
 )
-from students.models import Student
-from rest_framework import exceptions, serializers, status, viewsets
+from rest_framework import serializers, status, parsers, generics, views
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet
 from courses.permissions import CanAccessClass
 from courses.tasks import process_submission_file_task
 
@@ -25,12 +24,12 @@ from courses.serializers import (
     SubmissionFormSerializer,
     ExerciseFormSerializer,
     ExerciseSerializer,
-    SubmissionSerializer
+    SubmissionSerializer,
 )
-from rest_framework import generics
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from user_profiles.permissions import IsTeacher
+
 
 class CourseList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTeacher]
@@ -46,6 +45,7 @@ class CourseDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CourseSerializer
     queryset = Course.objects.all()
     lookup_field = "course_code"
+
 
 class ClassListByCourse(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTeacher]
@@ -71,28 +71,34 @@ class ClassListByCourse(generics.ListCreateAPIView):
         new_class = serializer.save(
             course=Course.objects.get(course_code=self.kwargs.get("course_code"))
         )
-        
+
         # Auto generate labs based on num_of_lab
         labs = []
         for x in range(1, new_class.num_of_lab + 1):
-            for y in ['PreLab', 'InLab', 'PostLab']:
-                weight_value = 0.2 if y == 'PreLab' else 0.4
-                lab = Lab(lab_type=y, lab_name=f"{x}-{y.split('Lab')[0].lower()}", class_code=new_class, weight=weight_value)
+            for y in ["PreLab", "InLab", "PostLab"]:
+                weight_value = 0.2 if y == "PreLab" else 0.4
+                lab = Lab(
+                    lab_type=y,
+                    lab_name=f"{x}-{y.split('Lab')[0].lower()}",
+                    class_code=new_class,
+                    weight=weight_value,
+                )
                 labs.append(lab)
-                
+
         Lab.objects.bulk_create(labs)
-        
+
+
 class ClassList(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsTeacher, CanAccessClass]
     serializer_class = ClassSerializer
-    
+
     def get_queryset(self):
         queryset = Class.objects.all()
         return queryset.filter(teacher__email=self.request.user.email)
-    
+
     def perform_create(self, serializer):
         serializer.save(teacher=self.request.user.email)
-        
+
 
 class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsTeacher]
@@ -111,15 +117,15 @@ class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
-    
+
 
 class SemesterList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SemesterSerializer
-    
+
     def get_queryset(self):
         return Semester.objects.all()
-    
+
     def perform_create(self, serializer):
         serializer.save()
 
@@ -201,7 +207,8 @@ class LearningOutcomeDetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
-    
+
+
 class ExerciseList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ExerciseSerializer
@@ -209,10 +216,8 @@ class ExerciseList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         class_code = self.kwargs.get("class_code")
-        
-        return Exercise.objects.filter(
-            class_code=class_code
-        )
+
+        return Exercise.objects.filter(class_code=class_code)
 
     def perform_create(self, serializer):
         target_course = self.kwargs.get("class_code")
@@ -228,7 +233,7 @@ class ExerciseDetail(generics.RetrieveUpdateDestroyAPIView):
         obj = get_object_or_404(
             Exercise.objects.all(),
             class_code=self.kwargs.get("class_code"),
-            id=int(self.kwargs.get("exercise_id"))
+            id=int(self.kwargs.get("exercise_id")),
         )
         self.check_object_permissions(self.request, obj)
         return obj
@@ -290,124 +295,134 @@ class LabLODetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
-    
-class ExerciseUploadForm(ViewSet):
+
+
+class ExerciseUploadForm(views.APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ExerciseFormSerializer
-    
-    def create(self, request):
+    parser_classes = (parsers.MultiPartParser, parsers.FileUploadParser)
+
+    def post(self, request, *args, **kwargs):
         serializer = ExerciseFormSerializer(data=request.data)
-        file = request.FILES.get('exercise_file')
-        
-        print('Upload exercise file: ', request.data, file.name)
-        if (serializer.is_valid()):
-            if not '.csv' in file.name:
+        file = request.FILES.get("exercise_file")
+
+        print("Upload exercise file: ", request.data, file.name)
+        if serializer.is_valid():
+            if not ".csv" in file.name:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
-            
-            class_code = serializer.validated_data.get('class_code')
+
+            class_code = serializer.validated_data.get("class_code")
             try:
-                target_class = Class.objects.get(
-                    class_code = class_code
-                )
+                target_class = Class.objects.get(class_code=class_code)
             except Class.DoesNotExist as e:
                 return Response(status.HTTP_400_BAD_REQUEST)
-            
+
             # Process file
             self.processFile(target_class, file)
-            
+
             return Response(f"Process exersise file {file.name} successfully!")
-        
+
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
+
     def processFile(self, target_class, file):
-        try: 
-            file_data = file.read().decode('utf-8')
-            lines = file_data.split('\r\n')
-            
+        try:
+            file_data = file.read().decode("utf-8")
+            lines = file_data.split("\r\n")
+
             exercises = []
             for line in lines[1:]:
-                fields = line.split(';')
-                print('Question fields: ', line, len(fields))
-                if (len(fields) != 8): continue
-                
-                new_id = self.get_integer_value(str(fields[6]).split('id=')[1], 0)
+                fields = line.split(";")
+                print("Question fields: ", line, len(fields))
+                if len(fields) != 8:
+                    continue
+
+                new_id = self.get_integer_value(str(fields[6]).split("id=")[1], 0)
                 if Exercise.objects.filter(id=new_id).exists():
                     continue
-                
+
                 # Validate outcome. Create new outcome if not existed
-                outcome_code = f"{fields[7]}.0" if len(str(fields[7])) <= 5 else str(fields[7])
+                outcome_code = (
+                    f"{fields[7]}.0" if len(str(fields[7])) <= 5 else str(fields[7])
+                )
                 course_code = target_class.course.course_code
                 outcome = LearningOutcome()
-                if not (LearningOutcome.objects.filter(outcome_code=outcome_code, course__course_code=course_code).exists()):
-                    outcome = LearningOutcome(outcome_code=outcome_code, course=target_class.course)
+                if not (
+                    LearningOutcome.objects.filter(
+                        outcome_code=outcome_code, course__course_code=course_code
+                    ).exists()
+                ):
+                    outcome = LearningOutcome(
+                        outcome_code=outcome_code, course=target_class.course
+                    )
                     outcome.parent_outcome = outcome_code[0:5]
                     outcome.save()
                 else:
-                    outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course__course_code=course_code)
-                
+                    outcome = LearningOutcome.objects.get(
+                        outcome_code=outcome_code, course__course_code=course_code
+                    )
+
                 exercise = Exercise()
-                exercise.id = self.get_integer_value(str(fields[6]).split('id=')[1], 0)
+                exercise.id = self.get_integer_value(str(fields[6]).split("id=")[1], 0)
                 exercise.exercise_code = fields[2]
-                exercise.exercise_name = str(fields[3]).split(']')[1].strip()
+                exercise.exercise_name = str(fields[3]).split("]")[1].strip()
                 exercise.url = fields[6]
                 exercise.outcome = outcome
-                exercise.lab = Lab.objects.get(lab_name=f"{fields[0]}-{str(fields[1]).split('lab')[0].lower()}")
+                exercise.lab = Lab.objects.get(
+                    lab_name=f"{fields[0]}-{str(fields[1]).split('lab')[0].lower()}"
+                )
                 exercise.class_code = target_class.class_code
                 exercise.course_code = target_class.course.course_code
                 exercise.topic = fields[4]
-                exercise.level = self.get_integer_value(str(fields[5]).split('-')[0], 0)
+                exercise.level = self.get_integer_value(str(fields[5]).split("-")[0], 0)
                 exercises.append(exercise)
-                
+
             # Save into database
             Exercise.objects.bulk_create(exercises, batch_size=100)
-            
+
         except Exception as e:
             raise e
-        
+
     def get_integer_value(self, str, default_val):
         try:
             int_value = int(str)
             return int_value
         except (TypeError, ValueError):
             return default_val
-            
 
-class SubmissionUploadForm(ViewSet):
+
+class SubmissionUploadForm(views.APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SubmissionFormSerializer
+    parser_classes = (parsers.MultiPartParser, parsers.FileUploadParser)
     
-    def create(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = SubmissionFormSerializer(data=request.data)
-        file = request.FILES.get('submission_file')
-        
-        print('Upload submission file: ', request.data, file.name)
-        if (serializer.is_valid()):
-            if not '.csv' in file.name:
+        file = request.FILES.get("submission_file")
+
+        print("Upload submission file: ", request.data, file.name)
+        if serializer.is_valid():
+            if not ".csv" in file.name:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
-            
-            class_code = serializer.validated_data.get('class_code')
+
+            class_code = serializer.validated_data.get("class_code")
             try:
-                target_class = Class.objects.get(
-                    class_code = class_code
-                )
+                target_class = Class.objects.get(class_code=class_code)
             except Class.DoesNotExist as e:
                 return Response(status.HTTP_400_BAD_REQUEST)
-            
+
             # Save file in storage
-            new_file = serializer.save(
-                class_code = target_class,
-                binaries = file
-            )
-            
+            new_file = serializer.save(class_code=target_class, binaries=file)
+
             # Process file
-            process_submission_file_task.apply_async(args = [
-                target_class.class_code, file.name, new_file.id
-            ])
-            
+            process_submission_file_task.apply_async(
+                args=[target_class.class_code, file.name, new_file.id]
+            )
+
             return Response(f"Uploaded submission file {file.name} successfully!")
-            
+
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class SubmissionList(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SubmissionSerializer
@@ -415,20 +430,18 @@ class SubmissionList(generics.ListAPIView):
 
     def get_queryset(self):
         class_code = self.kwargs.get("class_code")
-        page = self.request.query_params.get('page')
-        items = self.request.query_params.get('items')
-        
-        if (page and items):
+        page = self.request.query_params.get("page")
+        items = self.request.query_params.get("items")
+
+        if page and items:
             num_page = int(page)
-            if (num_page == 1):
-                return Submission.objects.filter(
-                    exercise__class_code=class_code
-                )[:(int(page) * int(items))]
-            
-            return Submission.objects.filter(
-                exercise__class_code=class_code
-            )[((num_page-1) * int(items)):(num_page * int(items))]
-        
-        return Submission.objects.filter(
-            exercise__class_code=class_code
-        )[:100]
+            if num_page == 1:
+                return Submission.objects.filter(exercise__class_code=class_code)[
+                    : (int(page) * int(items))
+                ]
+
+            return Submission.objects.filter(exercise__class_code=class_code)[
+                ((num_page - 1) * int(items)) : (num_page * int(items))
+            ]
+
+        return Submission.objects.filter(exercise__class_code=class_code)[:100]

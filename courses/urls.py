@@ -1,10 +1,6 @@
-from django.urls import path, include
+from django.urls import path
 from courses import views
-from rest_framework import routers
 
-router = routers.DefaultRouter()
-router.register("submission", views.SubmissionUploadForm, basename='upload')
-router.register("exercise", views.ExerciseUploadForm, basename='upload')
 
 urlpatterns = [
     path("courses/", views.CourseList.as_view(), name="course-list"),
@@ -16,11 +12,7 @@ urlpatterns = [
         views.ClassListByCourse.as_view(),
         name="class-list-by-course",
     ),
-    path(
-        "courses/semesters",
-        views.SemesterList.as_view(),
-        name="class-semesters"  
-    ),
+    path("courses/semesters", views.SemesterList.as_view(), name="class-semesters"),
     path(
         "courses/<str:course_code>/classes/<str:class_code>/",
         views.ClassDetail.as_view(),
@@ -56,12 +48,7 @@ urlpatterns = [
         views.LabLODetail.as_view(),
         name="contribution-detail",
     ),
-    path("", include(router.urls)),
-    path(
-        "classes",
-        views.ClassList.as_view(),
-        name="classes"
-    ),
+    path("classes", views.ClassList.as_view(), name="classes"),
     path(
         "classes/<str:class_code>/exercises/",
         views.ExerciseList.as_view(),
@@ -76,5 +63,15 @@ urlpatterns = [
         "classes/<str:class_code>/submissions/",
         views.SubmissionList.as_view(),
         name="submission-list-by-class",
-    )
+    ),
+    path(
+        "classes/<str:class_code>/submissions/upload",
+        views.SubmissionUploadForm.as_view(),
+        name="upload-submission",
+    ),
+    path(
+        "classes/<str:class_code>/exercises/upload",
+        views.ExerciseUploadForm.as_view(),
+        name="upload-exercise",
+    ),
 ]

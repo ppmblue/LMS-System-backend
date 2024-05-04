@@ -7,6 +7,7 @@ from user_profiles.serializers import UserProfileSerializer, MyTokenObtainPairSe
 from rest_framework_simplejwt.views import TokenObtainPairView
 from students.models import Student
 
+
 class UserProfileDetail(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserProfileSerializer
@@ -18,7 +19,7 @@ class UserProfileDetail(generics.RetrieveUpdateAPIView):
         return obj
 
 
-class MyTokenObtainPairView(TokenObtainPairView):
+class Login(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
 
@@ -28,29 +29,34 @@ class RegisterAPIView(generics.CreateAPIView):
     serializer_class = UserProfileSerializer
 
     def create(self, request, *args, **kwargs):
-        student_id = request.data.get('student_id')
+        student_id = request.data.get("student_id")
         if student_id:
             try:
                 student = Student.objects.get(student_id=student_id)
             except Student.DoesNotExist:
-                return Response({'error': 'Student ID not found in system data.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "Student ID not found in system data."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             if not UserProfile.objects.filter(student_id=student_id):
                 data = {
-                        'username': request.data.get('username'),
-                        'email': request.data.get('email'),
-                        'first_name': student.first_name,
-                        'last_name': student.last_name,
-                        'phone_number': request.data.get('phone_number'),
-                        'is_teacher': False,
-                        'student_id': student.student_id,
-                        'major': request.data.get('major'),
-                        'password': request.data.get('password')
-                    }
+                    "username": request.data.get("username"),
+                    "email": request.data.get("email"),
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "phone_number": request.data.get("phone_number"),
+                    "is_teacher": False,
+                    "student_id": student.student_id,
+                    "major": request.data.get("major"),
+                    "password": request.data.get("password"),
+                }
                 serializer = self.get_serializer(data=data)
                 if serializer.is_valid():
                     self.perform_create(serializer)
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({'error': 'Student account already exist!'})
-        return Response({'error': 'Student ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Student account already exist!"})
+        return Response(
+            {"error": "Student ID is required."}, status=status.HTTP_400_BAD_REQUEST
+        )
