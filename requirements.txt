@@ -2,6 +2,7 @@ amqp==5.2.0
 asgiref==3.7.2
 astroid==3.0.3
 async-timeout==4.0.3
+backports.zoneinfo==0.2.1;python_version<"3.9"
 billiard==4.2.0
 celery==5.4.0
 cffi==1.16.0

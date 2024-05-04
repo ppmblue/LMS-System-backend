@@ -26,7 +26,7 @@ urlpatterns = [
     path("api/", include("courses.urls")),
     path("__debug__/", include("debug_toolbar.urls")),
     # path('api/notifications', include('notifications.urls')),
-    path("accounts/", include("user_profiles.urls")),
+    path("api/users/", include("user_profiles.urls")),
     # path('api/students',include('students.urls')),
     path("api-token-auth/", MyTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api-token-auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
