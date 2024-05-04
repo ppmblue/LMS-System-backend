@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["103.56.162.106", "127.0.0.1", "localhost", "[::1]"]
+ALLOWED_HOSTS = ["103.56.162.106", "127.0.0.1", "localhost", "[::1]","lms-system-wheat.vercel.app"]
 
 # Application definition
 
