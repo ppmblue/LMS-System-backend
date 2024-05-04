@@ -73,12 +73,13 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "LMSSystemBackend.urls"
-CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = (
-    "http://localhost:8080",
-    "http://localhost:3000",
-    "http://103.56.162.106:8081",
-)
+CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_WHITELIST = (
+#     "http://localhost:8080",
+#     "http://localhost:3000",
+#     "http://103.56.162.106:8081",
+#     "https://lms-system-wheat.vercel.app/*",
+# )
 
 TEMPLATES = [
     {
