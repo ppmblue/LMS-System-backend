@@ -81,7 +81,7 @@ class Lab(models.Model):
     weight = models.FloatField(
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
     )
-    lab_name = models.CharField(max_length=50, unique=True)
+    lab_name = models.CharField(max_length=50)
     lab_type = models.CharField(max_length=50, choices=LAB_TYPE_CHOICES, null=True)
     class_code = models.ForeignKey(
         Class, related_name="lab_class", on_delete=models.CASCADE
