@@ -39,8 +39,8 @@ def process_submission_file_task(class_code, file_name, file_id):
             student = Student()
             if not (Student.objects.filter(student_id=student_id).exists()):
                 student = Student(student_id=student_id)
-                student.last_name = fields[0]
-                student.first_name = fields[1]
+                student.first_name = fields[0]
+                student.last_name = fields[1]
                 student.secured_student_id = base64.urlsafe_b64encode(str(student_id).encode())
                 student.save()
             else:
