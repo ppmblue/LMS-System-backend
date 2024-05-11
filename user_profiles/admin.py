@@ -10,6 +10,8 @@ from courses.models import (
     LabLOContribution,
     Exercise,
     Submission,
+    Enrollment,
+    UploadForm
 )
 from students.models import Student
 
@@ -65,3 +67,5 @@ admin.site.register(LabLOContribution)
 admin.site.register(Exercise)
 admin.site.register(Submission)
 admin.site.register(Student)
+admin.site.register(Enrollment)
+admin.site.register(UploadForm)
