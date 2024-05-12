@@ -233,7 +233,7 @@ class ExerciseDetail(generics.RetrieveUpdateDestroyAPIView):
         obj = get_object_or_404(
             Exercise.objects.all(),
             class_code=self.kwargs.get("class_code"),
-            id=int(self.kwargs.get("exercise_id")),
+            exercise_id=int(self.kwargs.get("exercise_id")),
         )
         self.check_object_permissions(self.request, obj)
         return obj
@@ -327,17 +327,17 @@ class ExerciseUploadForm(views.APIView):
     def processFile(self, target_class, file):
         try:
             file_data = file.read().decode("utf-8")
-            lines = file_data.split("\r\n")
+            lines = file_data.split("\n")
 
             exercises = []
             for line in lines[1:]:
                 fields = line.split(";")
-                print("Question fields: ", line, len(fields))
                 if len(fields) != 8:
                     continue
 
-                new_id = self.get_integer_value(str(fields[6]).split("id=")[1], 0)
-                if Exercise.objects.filter(id=new_id).exists():
+                new_exercise_id = self.get_integer_value(str(fields[6]).split("id=")[1], 0)
+                if Exercise.objects.filter(exercise_id=new_exercise_id, class_code=target_class.class_code).exists():
+                    print('Duplicated exercise: ', new_exercise_id, target_class.class_code)
                     continue
 
                 # Validate outcome. Create new outcome if not existed
@@ -362,13 +362,14 @@ class ExerciseUploadForm(views.APIView):
                     )
 
                 exercise = Exercise()
-                exercise.id = self.get_integer_value(str(fields[6]).split("id=")[1], 0)
+                exercise.exercise_id = self.get_integer_value(str(fields[6]).split("id=")[1], 0)
                 exercise.exercise_code = fields[2]
                 exercise.exercise_name = str(fields[3]).split("]")[1].strip()
                 exercise.url = fields[6]
                 exercise.outcome = outcome
                 exercise.lab = Lab.objects.get(
-                    lab_name=f"{fields[0]}-{str(fields[1]).split('lab')[0].lower()}"
+                    lab_name=f"{fields[0]}-{str(fields[1]).split('lab')[0].lower()}",
+                    class_code__id=target_class.id    
                 )
                 exercise.class_code = target_class.class_code
                 exercise.course_code = target_class.course.course_code

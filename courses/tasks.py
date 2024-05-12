@@ -31,7 +31,6 @@ def process_submission_file_task(class_code, file_name, file_id):
             class_code = class_code
         )
         for line in lines[1:]:
-            print('Line ', line)
             fields = line.split(',') if (',' in line) else line.split(';')
             if (len(fields) != 10): continue
             
@@ -55,11 +54,11 @@ def process_submission_file_task(class_code, file_name, file_id):
             # Validate exercise. Create new exercise if not existed
             question_id = ProcessFileHelper.get_integer_value(fields[9], 0)
             exercise = Exercise()
-            if not (Exercise.objects.filter(id=question_id).exists()):
-                exercise = Exercise(id=question_id, class_code=class_code)
+            if not (Exercise.objects.filter(exercise_id=question_id, class_code=class_code).exists()):
+                exercise = Exercise(exercise_id=question_id, class_code=class_code)
                 exercise.save()
             else:
-                exercise = Exercise.objects.get(id=question_id)
+                exercise = Exercise.objects.get(exercise_id=question_id, class_code=class_code)
                 
             print('Extract info ', student, exercise)
             

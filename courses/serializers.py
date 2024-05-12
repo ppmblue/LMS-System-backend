@@ -159,7 +159,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
         
     class Meta:
         model = Exercise
-        fields = ['id', 'exercise_code', 'exercise_name', 'class_code', 'level', 'topic', 'lab', 'outcome', 'url']
+        fields = ['id', 'exercise_id', 'exercise_code', 'exercise_name', 'class_code', 'level', 'topic', 'lab', 'outcome', 'url']
         
 class SubmissionSerializer(serializers.ModelSerializer):
     exercise = serializers.SlugRelatedField(

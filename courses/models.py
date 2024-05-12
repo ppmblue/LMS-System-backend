@@ -99,6 +99,13 @@ class Lab(models.Model):
 
     def __str__(self):
         return f"Lab {self.lab_name}"
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['lab_name', 'class_code'], name='unique_lab_class_combination'
+            )
+        ]
 
 
 class LearningOutcome(models.Model):
@@ -150,7 +157,8 @@ class UploadForm(models.Model):
     
     
 class Exercise(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
+    exercise_id = models.IntegerField(default=0)
     exercise_code = models.CharField(max_length=50, null=True)
     exercise_name = models.TextField(blank=True)
     url = models.URLField(blank=True)
@@ -164,7 +172,14 @@ class Exercise(models.Model):
     )
 
     def __str__(self):
-        return f"{self.id} - {self.outcome}"
+        return f"{self.id} - {self.exercise_id} - {self.outcome}"
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['exercise_id', 'class_code'], name='unique_question_class_combination'
+            )
+        ]
     
 class Submission(models.Model):    
     exercise = models.ForeignKey(
