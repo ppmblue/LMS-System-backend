@@ -34,17 +34,18 @@ def process_submission_file_task(class_code, file_name, file_id):
             fields = line.split(',') if (',' in line) else line.split(';')
             if (len(fields) != 10): continue
             
+            print('Line ', line)
             # Validate student. Create new student if not existed
             student_id = ProcessFileHelper.get_integer_value(fields[2], 2012715)
-            student = Student()
-            if not (Student.objects.filter(student_id=student_id).exists()):
-                student = Student(student_id=student_id)
-                student.first_name = fields[0]
-                student.last_name = fields[1]
-                student.secured_student_id = base64.urlsafe_b64encode(str(student_id).encode())
-                student.save()
-            else:
-                student = Student.objects.get(student_id=student_id)
+            # student = Student()
+            # if not (Student.objects.filter(student_id=student_id).exists()):
+            #     student = Student(student_id=student_id)
+            #     student.first_name = fields[0]
+            #     student.last_name = fields[1]
+            #     student.secured_student_id = base64.urlsafe_b64encode(str(student_id).encode())
+            #     student.save()
+            # else:
+            student = Student.objects.get(student_id=student_id)
                 
             # Validate enrollment. Create new enrollment if not existed
             if not (Enrollment.objects.filter(student__student_id=student_id, class_code__id=target_class.id).exists()):
@@ -53,28 +54,26 @@ def process_submission_file_task(class_code, file_name, file_id):
                 
             # Validate exercise. Create new exercise if not existed
             question_id = ProcessFileHelper.get_integer_value(fields[9], 0)
-            exercise = Exercise()
-            if not (Exercise.objects.filter(exercise_id=question_id, class_code=class_code).exists()):
-                exercise = Exercise(exercise_id=question_id, class_code=class_code)
-                exercise.save()
-            else:
-                exercise = Exercise.objects.get(exercise_id=question_id, class_code=class_code)
-                
-            print('Extract info ', student, exercise)
+            # exercise = Exercise()
+            # if not (Exercise.objects.filter(exercise_id=question_id, class_code=class_code).exists()):
+            #     exercise = Exercise(exercise_id=question_id, class_code=class_code)
+            #     exercise.save()
+            # else:
+            exercise = Exercise.objects.get(exercise_id=question_id, class_code=class_code)
             
             start_time = ProcessFileHelper.convertDate(str(fields[4]))
             end_time = ProcessFileHelper.convertDate(str(fields[5]))
             
             # Validate submission. Only create if not existed
-            if not (Submission.objects.filter(student__student_id=student.student_id, started_time=start_time, submitted_time=end_time, exercise__id=exercise.id).exists()):
-                submit = Submission()
-                submit.student = student
-                submit.exercise = exercise
-                submit.score = ProcessFileHelper.get_float_value(fields[7])
-                submit.time_taken = end_time - start_time
-                submit.started_time = start_time
-                submit.submitted_time = end_time
-                submissions.append(submit)
+            # if not (Submission.objects.filter(student__student_id=student.student_id, started_time=start_time, submitted_time=end_time, exercise__id=exercise.id).exists()):
+            submit = Submission()
+            submit.student = student
+            submit.exercise = exercise
+            submit.score = ProcessFileHelper.get_float_value(fields[7])
+            submit.time_taken = end_time - start_time
+            submit.started_time = start_time
+            submit.submitted_time = end_time
+            submissions.append(submit)
             
         # Save into database
         Submission.objects.bulk_create(submissions, batch_size=100)

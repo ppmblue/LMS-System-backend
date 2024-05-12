@@ -6,8 +6,7 @@ from courses.models import (
     LearningOutcome,
     LabLOContribution,
     Exercise,
-    Submission,
-    UploadForm,
+    Submission
 )
 from rest_framework import serializers, status, parsers, generics, views
 from rest_framework.response import Response
@@ -25,6 +24,7 @@ from courses.serializers import (
     ExerciseFormSerializer,
     ExerciseSerializer,
     SubmissionSerializer,
+    ExerciseAnalysisSerializer
 )
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -327,7 +327,7 @@ class ExerciseUploadForm(views.APIView):
     def processFile(self, target_class, file):
         try:
             file_data = file.read().decode("utf-8")
-            lines = file_data.split("\n")
+            lines = file_data.split("\r\n")
 
             exercises = []
             for line in lines[1:]:
@@ -388,8 +388,63 @@ class ExerciseUploadForm(views.APIView):
             int_value = int(str)
             return int_value
         except (TypeError, ValueError):
-            return default_val
+            return default_val    
+        
+class ExersiceContributionAnalysis(views.APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExerciseAnalysisSerializer
+    parser_classes = (parsers.MultiPartParser, parsers.FileUploadParser)
+    lookup_url_kwarg = ["course_code"]
+    
+    def post(self, request, *args, **kwargs):
+        serializer = ExerciseAnalysisSerializer(data=request.data)
+        file = request.FILES.get("exercise_file")
+        course_code = self.kwargs.get("course_code")
+        
+        print("Upload exercise file: ", request.data, file.name)
+        result = []
+        if serializer.is_valid():
+            if not ".csv" in file.name:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+            
+            # Analyze absent/available of lab-outcome
+            file_data = file.read().decode("utf-8")
+            lines = file_data.split("\r\n")
+            for line in lines[1:]:
+                fields = line.split(";")
+                if len(fields) != 8: continue
+            
+                # Validate outcome. Create new outcome if not existed
+                outcome_code = (
+                    f"{fields[7]}.0" if len(str(fields[7])) <= 5 else str(fields[7])
+                )
+                outcome = LearningOutcome.objects.get(
+                    outcome_code=outcome_code, course__course_code=course_code
+                )
+                lab = f'Lab {fields[0]}'
+                if len(result) == 0:
+                    result.append({
+                        'outcome_code': outcome.outcome_code,
+                        'threshold': outcome.threshold,
+                        'labs': [lab]
+                    })
+                elif not any(x['outcome_code'] == outcome.outcome_code for x in result):
+                    result.append({
+                        'outcome_code': outcome.outcome_code,
+                        'threshold': outcome.threshold,
+                        'labs': [lab]
+                    })
+                else:
+                    if not any(x['outcome_code'] == outcome.outcome_code and lab in x['labs'] for x in result):
+                        for item in result:
+                            if item['outcome_code'] == outcome.outcome_code:
+                                item['labs'].append(lab)
 
+            return Response(result)
+        
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+                
+    
 
 class SubmissionUploadForm(views.APIView):
     permission_classes = [IsAuthenticated]

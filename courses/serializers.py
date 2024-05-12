@@ -147,6 +147,13 @@ class ExerciseFormSerializer(serializers.ModelSerializer):
         model = UploadForm
         fields = ['class_code', 'exercise_file']
         
+class ExerciseAnalysisSerializer(serializers.ModelSerializer):
+    exercise_file = serializers.FileField(source='binaries')
+    
+    class Meta:
+        model = UploadForm
+        fields = ['exercise_file']
+        
 class ExerciseSerializer(serializers.ModelSerializer):
     lab = serializers.SlugRelatedField(
         queryset=Lab.objects.filter(),

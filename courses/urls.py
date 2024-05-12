@@ -74,4 +74,9 @@ urlpatterns = [
         views.ExerciseUploadForm.as_view(),
         name="upload-exercise",
     ),
+    path(
+        "courses/<str:course_code>/exercises/analyze",
+        views.ExersiceContributionAnalysis.as_view(),
+        name="analyze-exercise"
+    )
 ]
