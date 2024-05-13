@@ -48,6 +48,11 @@ urlpatterns = [
         views.LabLODetail.as_view(),
         name="contribution-detail",
     ),
+    path(
+        "courses/<str:course_code>/classes/<str:class_code>/labcontributions",
+        views.LOContributionSummarize.as_view(),
+        name="contribution-summarize-by-class"  
+    ),
     path("classes", views.ClassList.as_view(), name="classes"),
     path(
         "classes/<str:class_code>/exercises/",

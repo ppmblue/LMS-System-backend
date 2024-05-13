@@ -132,6 +132,14 @@ class LabLOContributionSerializer(serializers.ModelSerializer):
                 slug_field="outcome_code",
             )
 
+class LabLOContributionListSerializer(serializers.Serializer):
+    outcome_code = serializers.CharField()
+    lab = serializers.IntegerField()
+    contribution = serializers.DecimalField(max_digits=5, decimal_places=2)
+    
+    class Meta:
+        fields = ['outcome_code', 'lab', 'contribution']
+
 
 class SubmissionFormSerializer(serializers.ModelSerializer):
     submission_file = serializers.FileField(source='binaries')

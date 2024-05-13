@@ -12,6 +12,7 @@ from rest_framework import serializers, status, parsers, generics, views
 from rest_framework.response import Response
 from courses.permissions import CanAccessClass
 from courses.tasks import process_submission_file_task
+from django.db.models import Sum
 
 from courses.serializers import (
     CourseSerializer,
@@ -24,7 +25,8 @@ from courses.serializers import (
     ExerciseFormSerializer,
     ExerciseSerializer,
     SubmissionSerializer,
-    ExerciseAnalysisSerializer
+    ExerciseAnalysisSerializer,
+    LabLOContributionListSerializer
 )
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -295,7 +297,82 @@ class LabLODetail(generics.RetrieveUpdateDestroyAPIView):
         )
         self.check_object_permissions(self.request, obj)
         return obj
-
+    
+class LOContributionSummarize(views.APIView):
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = ["course_code", "class_code"]
+    
+    def get(self, request, *args, **kwargs):
+        course_code = self.kwargs.get("course_code")
+        class_code = self.kwargs.get("class_code")
+        try:
+            target_class = Class.objects.get(class_code=class_code, course__course_code=course_code)
+        except Class.DoesNotExist as e:
+            return Response(status.HTTP_400_BAD_REQUEST)
+        num_of_labs = target_class.num_of_lab
+        result = []
+        for outcome in LearningOutcome.objects.all():
+            result.append({
+                'outcome_code': outcome.outcome_code,
+                'threshold': outcome.threshold,
+                'labs': [-1 for x in range(0, num_of_labs)]
+            })
+            
+        # Check available or absent contribution
+        for item in result:
+            for x in range(0, num_of_labs):
+                lab = x + 1
+                if Exercise.objects.filter(outcome__outcome_code=item['outcome_code'],
+                    lab__lab_name__contains=f'{lab}').exists():
+                    item['labs'][x] = 0
+                    
+        # Calculate existing contribution
+        for item in result:
+            for x in range(0, num_of_labs):
+                if (item['labs'][x] < 0): continue
+                
+                lab = x + 1
+                contribution = LabLOContribution.objects.filter(outcome__outcome_code=item['outcome_code'],
+                    lab__lab_name__contains=f'{lab}').aggregate(total = Sum('contribution_percentage'))['total']
+                if contribution:
+                    item['labs'][x] = contribution
+                
+        return Response(result)
+    
+    def post(self, request, *args, **kwargs):
+        course_code = self.kwargs.get("course_code")
+        class_code = self.kwargs.get("class_code")
+        try:
+            target_class = Class.objects.get(class_code=class_code, course__course_code=course_code)
+        except Class.DoesNotExist as e:
+            return Response(status.HTTP_400_BAD_REQUEST)
+        
+        serializer = LabLOContributionListSerializer(data=request.data, many=True)
+        if serializer.is_valid():
+            for item in serializer.data:
+                labs = self.get_types_of_lab(class_code, item['outcome_code'], item['lab'])
+                weights = [0.2, 0.4, 0.4] if len(labs) == 3 else [0.3, 0.7]
+                outcome = LearningOutcome.objects.get(outcome_code=item['outcome_code'], course__course_code=course_code)
+                for index, lab_val in enumerate(labs):
+                    lab = Lab.objects.get(id=lab_val)
+                    # If lab_lo_contribution is already created, let's update contribution value
+                    if LabLOContribution.objects.filter(lab__id=lab.id, outcome__pk=outcome.pk).exists():
+                        lo_contribution = LabLOContribution.objects.get(lab__id=lab.id, outcome__pk=outcome.pk)
+                        lo_contribution.contribution_percentage = float(item['contribution'])*weights[index]
+                        lo_contribution.save()
+                    else:
+                        LabLOContribution(lab=lab, outcome=outcome, class_code=target_class, contribution_percentage=float(item['contribution'])*weights[index]).save()
+                
+            return Response(serializer.data)
+        
+    def get_types_of_lab(self, class_code, outcome, lab):
+        return Exercise.objects.filter(
+            class_code=class_code,
+            outcome__outcome_code=outcome,
+            lab__lab_name__contains=f'{lab}'
+        ).values_list('lab__id', flat=True).distinct()
+            
+                  
 
 class ExerciseUploadForm(views.APIView):
     permission_classes = [IsAuthenticated]
