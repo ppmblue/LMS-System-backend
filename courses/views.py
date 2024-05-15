@@ -365,6 +365,8 @@ class LOContributionSummarize(views.APIView):
                 
             return Response(serializer.data)
         
+        return Response(status.HTTP_400_BAD_REQUEST)
+        
     def get_types_of_lab(self, class_code, outcome, lab):
         return Exercise.objects.filter(
             class_code=class_code,

@@ -179,7 +179,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
 class SubmissionSerializer(serializers.ModelSerializer):
     exercise = serializers.SlugRelatedField(
         queryset=Exercise.objects.filter(),
-        slug_field='id'
+        slug_field='exercise_id'
     )
     student = serializers.SlugRelatedField(
         queryset=Student.objects.filter(),
