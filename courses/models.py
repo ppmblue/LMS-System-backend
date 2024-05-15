@@ -51,6 +51,7 @@ class Class(models.Model):
     )
     group = models.CharField(max_length=50, null=True)
     num_of_lab = models.IntegerField()
+    num_submit_file = models.IntegerField(default=0)
     TEACHER_ROLE_CHOICES = [
         ("Lecturer", "Lecturer"),
         ("HeadLecturer", "Head Lecturer"),

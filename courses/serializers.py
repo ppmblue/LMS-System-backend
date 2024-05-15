@@ -49,9 +49,13 @@ class ClassSerializer(serializers.ModelSerializer):
     )
     
     num_of_submissions = serializers.SerializerMethodField('count_submissions')
+    num_of_exercises = serializers.SerializerMethodField('count_exercises')
     
     def count_submissions(self, obj):
         return Submission.objects.filter(exercise__class_code=obj.class_code).count()
+    
+    def count_exercises(self, obj):
+        return Exercise.objects.filter(class_code=obj.class_code).count()
 
     class Meta:
         model = Class
@@ -64,7 +68,9 @@ class ClassSerializer(serializers.ModelSerializer):
             "role",
             "class_code",
             "group",
-            "num_of_submissions"
+            "num_of_submissions",
+            "num_of_exercises",
+            "num_submit_file"
         )
         lookup_field = ["course", "class_code"]
         read_only_fields = ["class_code"]

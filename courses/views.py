@@ -542,6 +542,8 @@ class SubmissionUploadForm(views.APIView):
             class_code = serializer.validated_data.get("class_code")
             try:
                 target_class = Class.objects.get(class_code=class_code)
+                target_class.num_submit_file += 1
+                target_class.save()
             except Class.DoesNotExist as e:
                 return Response(status.HTTP_400_BAD_REQUEST)
 
