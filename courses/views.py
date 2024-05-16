@@ -588,81 +588,83 @@ class SubmissionList(generics.ListAPIView):
             ]
 
         return Submission.objects.filter(exercise__class_code=class_code)[:100]
-    
-class OutcomeProgressAnalysisDetail(views.APIView):
+
+class OutcomeProgressAnalysisList(views.APIView):
     permission_classes = [IsAuthenticated]
-    lookup_url_kwarg = ["student_id", "class_code", "lab_name"]
+    lookup_url_kwarg = ["student_id", "class_code", "start_lab", "end_lab"]
     
     def get(self, request, *args, **kwargs):
         student_id = self.kwargs.get("student_id")
         class_code = self.kwargs.get("class_code")
-        lab_name = self.kwargs.get("lab_name")
-    
-        return Response('Success!!!')
-        # try:
-        #     lab = Lab.objects.get(class_code__class_code=class_code, lab_name=lab_name)
-        #     student = Student.objects.get(student_id=int(student_id))
-        # except Exception:
-        #     return Response(status.HTTP_400_BAD_REQUEST)
+        start_lab = self.kwargs.get("start_lab")
+        end_lab = self.kwargs.get("end_lab")
         
-        # # Find all outcomes
-        # result = []
-        # lab_names = self.get_interval(lab.lab_name, lab.class_code.num_of_lab, class_code)
-        # for outcome in LearningOutcome.objects.all():
-        #     max_contribution = 0
-        #     curr_progress = 0
-        #     contribute_labs = []
-        #     # Pass threshold
-        #     threshold = LearningOutcome.objects.get(outcome_code=outcome.outcome_code
-        #         , course__course_code = lab.class_code.course.course_code).threshold
+        try:
+            target_class = Class.objects.get(class_code=class_code)
+        except Exception:
+            return Response(status.HTTP_400_BAD_REQUEST)
+        
+        if student_id == 'all':
+            page = self.request.query_params.get("page")
+            items = self.request.query_params.get("items")
             
-        #     # Calculate outcome progress through first lab -> current lab
-        #     for lab_name in lab_names:
-        #         submissions = Submission.objects.filter(student__student_id=student.student_id
-        #             , exercise__lab__lab_name=lab_name
-        #             , exercise__outcome__outcome_code=outcome.outcome_code)
+            result = []
+            student_ids = Enrollment.objects.filter(class_code__class_code=class_code).values_list('student__student_id', flat=True).distinct()
+            
+            if page and items:
+                num_page = int(page)
+                num_items = int(items)
+                if num_page == 1:
+                    student_ids = student_ids[:num_page * num_items]
+                else:
+                    student_ids = student_ids[(num_page - 1) * num_items : num_page * num_items]
+            
+            for student in Student.objects.filter(student_id__in=student_ids):
+                item = self.get_outcome_progress(student, start_lab, end_lab, target_class)
+                result.append(item)
+                
+            return Response(result)
+
+        else:
+            try:
+                student = Student.objects.get(student_id=int(student_id))
+            except Exception:
+                return Response(status.HTTP_400_BAD_REQUEST)
+            
+            return Response(self.get_outcome_progress(student, start_lab, end_lab, target_class))
     
-        #         # Update max_progress of a student
-        #         try:
-        #             contribution = LabLOContribution.objects.get(lab__lab_name=lab_name
-        #                 , lab__class_code__class_code=class_code
-        #                 , outcome__outcome_code=outcome.outcome_code).contribution_percentage
-        #         except:
-        #             contribution = 0
+    def get_outcome_progress(self, student, start_lab, end_lab, target_class):
+        # Find outcome progress for one student
+        result = {}
+        result['student'] = student.student_id
+        result['secured_student'] = student.secured_student_id
+        lab_names = self.get_interval(start_lab, end_lab, target_class.num_of_lab)
+        # Init value
+        for outcome in LearningOutcome.objects.all():
+            result[f'{outcome.outcome_code}'] = []
+            result[f'max_{outcome.outcome_code}'] = []
                 
-        #         if (contribution > 0):
-        #             contribute_labs.append(lab_name)
-        #             max_contribution += contribution
-                    
-        #         if (submissions.count() <= 0): continue
-                
-        #         correct_submit = 0
-        #         for submit in submissions:
-        #             if submit.score > threshold:
-        #                 correct_submit += 1
-                        
-        #         # Update current_progress after finishing lab
-        #         curr_progress += Decimal(correct_submit / submissions.count()) * contribution
-                
-        #     result.append({
-        #         "outcome": outcome.outcome_code,
-        #         "progress": round(curr_progress, 2),
-        #         "max-progress": max_contribution,
-        #         "contribute-lab": contribute_labs,
-        #         "threshold": threshold
-        #     })
+        # Calculate outcome progress through start lab -> end lab
+        for lab_name in lab_names:
+            progress_vals = OutcomeProgress.objects.filter(lab__lab_name=lab_name
+                , lab__class_code__class_code=target_class.class_code
+                , student__student_id=student.student_id)
+        
+            for progress in progress_vals:
+                result[f'{progress.outcome.outcome_code}'].append(progress.progress)
+                result[f'max_{progress.outcome.outcome_code}'].append(progress.max_progress)
+        
+        return result
             
-        #     # Save into database for fast query later
-        #     if not OutcomeProgress.objects.filter(lab=lab, student=student, outcome=outcome).exists():
-        #         OutcomeProgress(lab=lab, student=student, outcome=outcome, progress=round(curr_progress, 2), max_progress=max_contribution).save()
-            
-        # return Response(result)
             
     # Calculate interval between 2 labs
-    def get_interval(self, curr_lab, num_of_lab, class_code):
+    def get_interval(self, start_lab, end_lab, num_of_lab):
         matrix = [[f'{x}-pre', f'{x}-in', f'{x}-post'] for x in range(1, num_of_lab + 1)]
         all_labs = [item for row in matrix for item in row]
-        curr_idx = all_labs.index(curr_lab) + 1
-        labs = all_labs[0 : curr_idx]
         
-        return Lab.objects.filter(lab_name__in=labs, class_code__class_code=class_code).values_list('lab_name', flat=True).distinct()
+        # Calculate index
+        start_idx = all_labs.index(start_lab)
+        end_idx = all_labs.index(end_lab) + 1
+        labs = all_labs[start_idx : end_idx]
+        
+        return labs
