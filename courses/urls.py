@@ -88,5 +88,15 @@ urlpatterns = [
         "classes/<str:class_code>/students/<str:student_id>/from/<str:start_lab>/to/<str:end_lab>/progress",
         views.OutcomeProgressAnalysisList.as_view(),
         name="outcome-progress-by-student"
+    ),
+    path(
+        "classes/<str:class_code>/labs/<str:lab_name>/overview",
+        views.OutcomeProgressSummarizeByLab.as_view(),
+        name="overview-progress-by-lab"
+    ),
+    path(
+        "classes/<str:class_code>/outcomes/<str:outcome_code>/progress",
+        views.OutcomeProgressSummarizeDetail.as_view(),
+        name="detail-progress-by-outcome"
     )
 ]

@@ -668,3 +668,70 @@ class OutcomeProgressAnalysisList(views.APIView):
         labs = all_labs[start_idx : end_idx]
         
         return labs
+
+
+class OutcomeProgressSummarizeByLab(views.APIView):
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = ["class_code", "lab_name"]
+    
+    def get(self, request, *args, **kwargs):
+        class_code = self.kwargs.get("class_code")
+        lab_name = self.kwargs.get("lab_name")
+        
+        try:
+            target_class = Class.objects.get(class_code=class_code)
+            lab = Lab.objects.get(lab_name=lab_name, class_code__class_code=class_code)
+        except Exception:
+            return Response(status.HTTP_400_BAD_REQUEST)
+        
+        outcomes = LearningOutcome.objects.filter(course__course_code=target_class.course.course_code)
+        total_students = Enrollment.objects.filter(class_code__class_code=class_code).values_list('student__student_id', flat=True).distinct().count()
+        passed = []
+        failed = []
+        for outcome in outcomes:
+            curr_passed = OutcomeProgress.objects.filter(lab=lab, outcome=outcome, progress__gte=0.5).count()
+            curr_failed = OutcomeProgress.objects.filter(lab=lab, outcome=outcome, progress__lt=0.5).count()
+            
+            passed.append(curr_passed)
+            failed.append(curr_failed)
+            
+        return Response({
+            "total_students": total_students,
+            "passed": passed,
+            "failed": failed,
+            "outcomes": outcomes.values_list('outcome_code', flat=True)
+        })
+        
+class OutcomeProgressSummarizeDetail(views.APIView):
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = ["class_code", "outcome_code"]
+    
+    def get(self, request, *args, **kwargs):
+        class_code = self.kwargs.get("class_code")
+        outcome_code = self.kwargs.get("outcome_code")
+        try:
+            target_class = Class.objects.get(class_code=class_code)
+            outcome=LearningOutcome.objects.get(outcome_code=outcome_code, course__course_code=target_class.course.course_code)
+        except Class.DoesNotExist as e:
+            return Response(status.HTTP_400_BAD_REQUEST)
+
+        result = {
+            "outcome_code": outcome.outcome_code,
+            "threshold": outcome.threshold,
+            "labs": []
+        }
+                    
+        # Calculate lab contributions
+        for contribution in LabLOContribution.objects.filter(outcome=outcome, class_code=target_class):
+            result["labs"].append({
+                "lab": contribution.lab.lab_name,
+                "contribution": contribution.contribution_percentage
+            })
+            
+        # Calculate pass/fail rate
+        last_lab = Lab.objects.get(class_code=target_class, lab_name=f'{target_class.num_of_lab}-post')
+        result["passed"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__gte=0.5).count()
+        result["failed"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.5).count()
+        result["rate"] = round(result["passed"] / (result["passed"] + result["failed"]), 2)
+                
+        return Response(result)
