@@ -213,3 +213,30 @@ class Enrollment(models.Model):
         related_name="enroll_class",
         on_delete=models.CASCADE
     )
+    
+class OutcomeProgress(models.Model):
+    student = models.ForeignKey(
+        Student,
+        related_name="progress_student",
+        on_delete=models.CASCADE
+    )
+    
+    lab = models.ForeignKey(
+        Lab,
+        related_name="progress_lab",
+        on_delete=models.CASCADE
+    )
+    
+    outcome = models.ForeignKey(
+        LearningOutcome,
+        related_name="progress_outcome",
+        on_delete=models.CASCADE        
+    )
+    
+    progress = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0
+    )
+    
+    max_progress = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0
+    )

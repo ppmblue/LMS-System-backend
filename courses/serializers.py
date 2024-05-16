@@ -8,7 +8,8 @@ from courses.models import (
     LabLOContribution,
     UploadForm,
     Exercise,
-    Submission
+    Submission,
+    Enrollment
 )
 from user_profiles.models import UserProfile
 from students.models import Student
@@ -50,12 +51,20 @@ class ClassSerializer(serializers.ModelSerializer):
     
     num_of_submissions = serializers.SerializerMethodField('count_submissions')
     num_of_exercises = serializers.SerializerMethodField('count_exercises')
+    num_of_outcomes = serializers.SerializerMethodField('count_outcomes')
+    num_of_students = serializers.SerializerMethodField('count_students')
     
     def count_submissions(self, obj):
         return Submission.objects.filter(exercise__class_code=obj.class_code).count()
     
     def count_exercises(self, obj):
         return Exercise.objects.filter(class_code=obj.class_code).count()
+    
+    def count_outcomes(self, obj):
+        return LearningOutcome.objects.filter(course__course_code=obj.course.course_code).values('parent_outcome').distinct().count()
+    
+    def count_students(self, obj):
+        return Enrollment.objects.filter(class_code__class_code=obj.class_code).count()
 
     class Meta:
         model = Class
@@ -70,7 +79,9 @@ class ClassSerializer(serializers.ModelSerializer):
             "group",
             "num_of_submissions",
             "num_of_exercises",
-            "num_submit_file"
+            "num_submit_file",
+            "num_of_outcomes",
+            "num_of_students"
         )
         lookup_field = ["course", "class_code"]
         read_only_fields = ["class_code"]

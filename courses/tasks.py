@@ -1,9 +1,14 @@
+from decimal import Decimal
 from courses.models import (
     Exercise,
     Submission,
     UploadForm,
     Enrollment,
-    Class
+    Class,
+    OutcomeProgress,
+    LabLOContribution,
+    LearningOutcome,
+    Lab
 )
 from students.models import Student
 from celery import shared_task
@@ -82,6 +87,69 @@ def process_submission_file_task(class_code, file_name, file_id):
         UploadForm.objects.get(id=file_id).delete()
         if (os.path.isfile(full_path)):
             os.remove(full_path)
+            
+        # Log success
+        print(f"Import submission file for class {class_code} successfully!")
+            
+        # Calculate outcome progress
+        OutcomeProgressHelper.calculate_outcome_progress(class_code)
+
+class OutcomeProgressHelper:
+    def calculate_outcome_progress(class_code):
+        student_ids = Enrollment.objects.filter(class_code__class_code=class_code).values_list('student__student_id', flat=True).distinct()
+        target_class = Class.objects.get(class_code=class_code)
+        
+        # Find all outcomes
+        matrix = [[f'{x}-pre', f'{x}-in', f'{x}-post'] for x in range(1, target_class.num_of_lab + 1)]
+        lab_names = [item for row in matrix for item in row]
+        list_progress = []
+        for outcome in LearningOutcome.objects.all():
+            # Calculate outcome progress for each student
+            for student_id in student_ids:
+                max_contribution = 0
+                curr_progress = 0
+                
+                # Calculate outcome progress through first lab -> current lab
+                for lab_name in lab_names:
+                    lab = Lab.objects.get(class_code__class_code=class_code, lab_name=lab_name)
+                    submissions = Submission.objects.filter(student__student_id=student_id
+                        , exercise__lab__lab_name=lab_name
+                        , exercise__outcome__outcome_code=outcome.outcome_code)
+                    
+                    # Pass threshold
+                    threshold = LearningOutcome.objects.get(outcome_code=outcome.outcome_code
+                        , course__course_code = lab.class_code.course.course_code).threshold
+        
+                    # Update max_progress of a student
+                    try:
+                        contribution = LabLOContribution.objects.get(lab__lab_name=lab_name
+                            , lab__class_code__class_code=class_code
+                            , outcome__outcome_code=outcome.outcome_code).contribution_percentage
+                    except:
+                        contribution = 0
+                    
+                    max_contribution += contribution
+                    correct_submit = 0
+                    for submit in submissions:
+                        if submit.score > threshold:
+                            correct_submit += 1
+                            
+                    # Update current_progress after finishing lab
+                    submission_count = submissions.count()
+                    if (submission_count > 0):
+                        curr_progress += Decimal(correct_submit / submission_count) * contribution
+
+                    # Save into list progress
+                    if not OutcomeProgress.objects.filter(lab=lab, student__student_id=student_id, outcome=outcome).exists():
+                        student = Student.objects.get(student_id=student_id)
+                        new_progress = OutcomeProgress(lab=lab, student=student, outcome=outcome, progress=round(curr_progress, 2), max_progress=max_contribution)
+                        list_progress.append(new_progress)
+        
+        # Save into database for fast query later           
+        OutcomeProgress.objects.bulk_create(list_progress, batch_size=100)
+        
+        # Log success
+        print(f"Calculate outcome progress for class {class_code} successfully!")
 
 class ProcessFileHelper:    
     def get_integer_value(str, default_val):

@@ -83,5 +83,10 @@ urlpatterns = [
         "courses/<str:course_code>/exercises/analyze",
         views.ExersiceContributionAnalysis.as_view(),
         name="analyze-exercise"
+    ),
+    path(
+        "classes/<str:class_code>/labs/<str:lab_name>/students/<str:student_id>/progress",
+        views.OutcomeProgressAnalysisDetail.as_view(),
+        name="outcome-progress-by-student"
     )
 ]
