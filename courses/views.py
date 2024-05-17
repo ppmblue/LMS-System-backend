@@ -32,6 +32,7 @@ from courses.serializers import (
     ExerciseAnalysisSerializer,
     LabLOContributionListSerializer
 )
+from students.serializers import StudentSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from user_profiles.permissions import IsTeacher
@@ -575,19 +576,28 @@ class SubmissionList(generics.ListAPIView):
         class_code = self.kwargs.get("class_code")
         page = self.request.query_params.get("page")
         items = self.request.query_params.get("items")
+        sortBy = self.request.query_params.get("sortBy")
+        sortOrder = self.request.query_params.get("sortOrder")
+
+        submissions = Submission.objects.all()
+        if sortBy and sortOrder:
+            if sortOrder == 'desc':
+                submissions = submissions.order_by(f'-{sortBy}')
+            else:
+                submissions = submissions.order_by(sortBy)
 
         if page and items:
             num_page = int(page)
             if num_page == 1:
-                return Submission.objects.filter(exercise__class_code=class_code)[
+                return submissions.filter(exercise__class_code=class_code)[
                     : (int(page) * int(items))
                 ]
 
-            return Submission.objects.filter(exercise__class_code=class_code)[
+            return submissions.filter(exercise__class_code=class_code)[
                 ((num_page - 1) * int(items)) : (num_page * int(items))
             ]
 
-        return Submission.objects.filter(exercise__class_code=class_code)[:100]
+        return submissions.filter(exercise__class_code=class_code)[:100]
 
 class OutcomeProgressAnalysisList(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -607,9 +617,13 @@ class OutcomeProgressAnalysisList(views.APIView):
         if student_id == 'all':
             page = self.request.query_params.get("page")
             items = self.request.query_params.get("items")
+            query = self.request.query_params.get("query")
             
             result = []
             student_ids = Enrollment.objects.filter(class_code__class_code=class_code).values_list('student__student_id', flat=True).distinct()
+            
+            if query and query != '':
+                student_ids = list(filter(lambda x: query in f'{x}', student_ids))
             
             if page and items:
                 num_page = int(page)
@@ -620,7 +634,7 @@ class OutcomeProgressAnalysisList(views.APIView):
                     student_ids = student_ids[(num_page - 1) * num_items : num_page * num_items]
             
             for student in Student.objects.filter(student_id__in=student_ids):
-                item = self.get_outcome_progress(student, start_lab, end_lab, target_class)
+                item = self.get_outcome_progress(student, start_lab, end_lab, target_class, False)
                 result.append(item)
                 
             return Response(result)
@@ -631,14 +645,16 @@ class OutcomeProgressAnalysisList(views.APIView):
             except Exception:
                 return Response(status.HTTP_400_BAD_REQUEST)
             
-            return Response(self.get_outcome_progress(student, start_lab, end_lab, target_class))
+            return Response(self.get_outcome_progress(student, start_lab, end_lab, target_class, True))
     
-    def get_outcome_progress(self, student, start_lab, end_lab, target_class):
+    def get_outcome_progress(self, student, start_lab, end_lab, target_class, checkProgress):
         # Find outcome progress for one student
         result = {}
         result['student'] = student.student_id
+        result['first_name'] = student.first_name
+        result['last_name'] = student.last_name
         result['secured_student'] = student.secured_student_id
-        lab_names = self.get_interval(start_lab, end_lab, target_class.num_of_lab)
+        lab_names = self.get_interval(start_lab, end_lab, target_class.num_of_lab) if checkProgress else [start_lab, end_lab]
         # Init value
         for outcome in LearningOutcome.objects.all():
             result[f'{outcome.outcome_code}'] = []
@@ -732,6 +748,42 @@ class OutcomeProgressSummarizeDetail(views.APIView):
         last_lab = Lab.objects.get(class_code=target_class, lab_name=f'{target_class.num_of_lab}-post')
         result["passed"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__gte=0.5).count()
         result["failed"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.5).count()
-        result["rate"] = round(result["passed"] / (result["passed"] + result["failed"]), 2)
+        result["rate"] = round(result["passed"] / (result["passed"] + result["failed"]), 2) if (result["passed"] + result["failed"]) > 0 else 0
                 
         return Response(result)
+    
+class StudentListByClass(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = StudentSerializer
+    lookup_url_kwarg = ["class_code"]
+
+    def get_queryset(self):
+        class_code = self.kwargs.get("class_code")
+        
+        try:
+            _ = Class.objects.get(class_code=class_code)
+        except Exception:
+            return Response(status.HTTP_400_BAD_REQUEST)
+        student_ids = Enrollment.objects.filter(class_code__class_code=class_code).values_list('student__student_id', flat=True).distinct()
+        
+        return Student.objects.filter(
+            student_id__in=student_ids
+        )
+        
+class ExerciseRecommendation(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExerciseSerializer
+    lookup_url_kwarg = ["class_code", "student_id"]
+
+    def get_queryset(self):
+        class_code = self.kwargs.get("class_code")
+        student_id = self.kwargs.get("student_id")
+        
+        try:
+            _ = Class.objects.get(class_code=class_code)
+        except Exception:
+            return Response(status.HTTP_400_BAD_REQUEST)
+        
+        return Exercise.objects.filter(
+            class_code = class_code
+        )[:5]

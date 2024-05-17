@@ -98,5 +98,15 @@ urlpatterns = [
         "classes/<str:class_code>/outcomes/<str:outcome_code>/progress",
         views.OutcomeProgressSummarizeDetail.as_view(),
         name="detail-progress-by-outcome"
-    )
+    ),
+    path(
+        "classes/<str:class_code>/students",
+        views.StudentListByClass.as_view(),
+        name="list-student-by-class"
+    ),
+        path(
+        "classes/<str:class_code>/students/<str:student_id>/recommend",
+        views.ExerciseRecommendation.as_view(),
+        name="exercise-recommend"
+    ),
 ]
