@@ -54,6 +54,7 @@ urlpatterns = [
         name="contribution-summarize-by-class"  
     ),
     path("classes", views.ClassList.as_view(), name="classes"),
+    path("students/<str:student_id>/classes", views.EnrollClassList.as_view(), name="classes-by-student"),
     path(
         "classes/<str:class_code>/exercises/",
         views.ExerciseList.as_view(),
@@ -98,6 +99,11 @@ urlpatterns = [
         "classes/<str:class_code>/outcomes/<str:outcome_code>/progress",
         views.OutcomeProgressSummarizeDetail.as_view(),
         name="detail-progress-by-outcome"
+    ),
+    path(
+        "classes/<str:class_code>/outcomes/<str:outcome_code>/histogram",
+        views.OutcomeProgressHistogram.as_view(),
+        name="outcome-progress-histogram"
     ),
     path(
         "classes/<str:class_code>/students",

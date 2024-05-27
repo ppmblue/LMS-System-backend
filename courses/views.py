@@ -16,7 +16,7 @@ from rest_framework import serializers, status, parsers, generics, views
 from rest_framework.response import Response
 from courses.permissions import CanAccessClass
 from courses.tasks import process_submission_file_task
-from django.db.models import Sum
+from django.db.models import Sum, Avg
 
 from courses.serializers import (
     CourseSerializer,
@@ -105,6 +105,18 @@ class ClassList(generics.ListAPIView):
 
     def perform_create(self, serializer):
         serializer.save(teacher=self.request.user.email)
+        
+
+class EnrollClassList(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = ["student_id"]
+    serializer_class = ClassSerializer
+    
+    def get_queryset(self):
+        student_id = int(self.kwargs.get("student_id"))
+        enroll_classes = Enrollment.objects.filter(student__student_id=student_id).values_list('class_code__class_code', flat=True).distinct()
+        
+        return Class.objects.filter(class_code__in=enroll_classes)
 
 
 class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -749,6 +761,34 @@ class OutcomeProgressSummarizeDetail(views.APIView):
         result["passed"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__gte=0.5).count()
         result["failed"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.5).count()
         result["rate"] = round(result["passed"] / (result["passed"] + result["failed"]), 2) if (result["passed"] + result["failed"]) > 0 else 0
+                
+        return Response(result)
+    
+class OutcomeProgressHistogram(views.APIView):
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = ["class_code", "outcome_code"]
+    
+    def get(self, request, *args, **kwargs):
+        class_code = self.kwargs.get("class_code")
+        outcome_code = self.kwargs.get("outcome_code")
+        try:
+            target_class = Class.objects.get(class_code=class_code)
+            outcome=LearningOutcome.objects.get(outcome_code=outcome_code, course__course_code=target_class.course.course_code)
+        except Class.DoesNotExist as e:
+            return Response(status.HTTP_400_BAD_REQUEST)
+
+        result = {
+            "outcome_code": outcome.outcome_code
+        }
+            
+        # Calculate pass/fail rate
+        last_lab = Lab.objects.get(class_code=target_class, lab_name=f'{target_class.num_of_lab}-post')
+        result["0 - 0.2"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.2).count()
+        result["0.2 - 0.4"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.4, progress__gte=0.2).count()
+        result["0.4 - 0.6"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.6, progress__gte=0.4).count()
+        result["0.6 - 0.8"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.8, progress__gte=0.6).count()
+        result["0.8 - 1"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__gte=0.8).count()
+        result["average"] = round(OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome).aggregate(avg = Avg('progress'))['avg'], 2)
                 
         return Response(result)
     
