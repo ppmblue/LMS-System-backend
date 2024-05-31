@@ -1,4 +1,7 @@
 from decimal import Decimal
+import os
+
+from django.http import HttpResponse
 from courses.models import (
     Course,
     Semester,
@@ -17,6 +20,7 @@ from rest_framework.response import Response
 from courses.permissions import CanAccessClass
 from courses.tasks import process_submission_file_task
 from django.db.models import Sum, Avg
+from django.core.files import File
 
 from courses.serializers import (
     CourseSerializer,
@@ -30,12 +34,14 @@ from courses.serializers import (
     ExerciseSerializer,
     SubmissionSerializer,
     ExerciseAnalysisSerializer,
-    LabLOContributionListSerializer
+    LabLOContributionListSerializer,
+    CreateExerciseSerializer,
+    LearningOutcomeListSerializer
 )
 from students.serializers import StudentSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
-from user_profiles.permissions import IsTeacher
+from user_profiles.permissions import IsTeacher, IsHeadTeacher
 
 
 class CourseList(generics.ListCreateAPIView):
@@ -101,6 +107,9 @@ class ClassList(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = Class.objects.all()
+        if (self.request.user.is_head_teacher):
+            return queryset
+        
         return queryset.filter(teacher__email=self.request.user.email)
 
     def perform_create(self, serializer):
@@ -211,7 +220,32 @@ class LearningOutcomeList(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         target_course = Course.objects.get(course_code=self.kwargs.get("course_code"))
         serializer.save(course=target_course)
+        
 
+class CreateLearningOutcomeList(views.APIView):
+    permission_classes = [IsAuthenticated, IsHeadTeacher]
+    lookup_url_kwarg = ["course_code"]
+    
+    def post(self, request, *args, **kwargs):
+        course_code = self.kwargs.get("course_code")
+        try:
+            target_course = Course.objects.get(course_code=course_code)
+        except Course.DoesNotExist as e:
+            return Response(status.HTTP_400_BAD_REQUEST)
+        
+        serializer = LearningOutcomeListSerializer(data=request.data, many=True)
+        print('Data ', request.data)
+        if serializer.is_valid(raise_exception=True):
+            for item in serializer.data:
+                LearningOutcome(course=target_course
+                    , outcome_code=item['outcome_code']
+                    , outcome_description=item['outcome_description']
+                    , threshold=item['threshold']
+                    , parent_outcome=item['parent_outcome']).save()
+                
+            return Response(serializer.data)
+        
+        return Response(status.HTTP_400_BAD_REQUEST)
 
 class LearningOutcomeDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
@@ -228,7 +262,7 @@ class LearningOutcomeDetail(generics.RetrieveUpdateDestroyAPIView):
         return obj
 
 
-class ExerciseList(generics.ListCreateAPIView):
+class ExerciseList(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ExerciseSerializer
     lookup_url_kwarg = ["class_code"]
@@ -237,11 +271,18 @@ class ExerciseList(generics.ListCreateAPIView):
         class_code = self.kwargs.get("class_code")
 
         return Exercise.objects.filter(class_code=class_code)
+    
+class CreateNewExcercise(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CreateExerciseSerializer
+    lookup_url_kwarg = ["class_code", "lab_name"]
 
     def perform_create(self, serializer):
-        target_course = self.kwargs.get("class_code")
-        serializer.save(class_code=target_course)
+        class_code = self.kwargs.get("class_code")
+        lab_name = self.kwargs.get("lab_name")
+        lab = Lab.objects.get(lab_name=lab_name, class_code__class_code=class_code)
 
+        serializer.save(class_code=class_code, lab=lab)
 
 class ExerciseDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
@@ -328,7 +369,7 @@ class LOContributionSummarize(views.APIView):
             return Response(status.HTTP_400_BAD_REQUEST)
         num_of_labs = target_class.num_of_lab
         result = []
-        for outcome in LearningOutcome.objects.all():
+        for outcome in LearningOutcome.objects.filter(course__course_code=course_code):
             result.append({
                 'parent_outcome': outcome.parent_outcome,
                 'outcome_code': outcome.outcome_code,
@@ -827,3 +868,22 @@ class ExerciseRecommendation(generics.ListAPIView):
         return Exercise.objects.filter(
             class_code = class_code
         )[:5]
+        
+class DownloadSampleFile(views.APIView):
+    permission_classes = [IsAuthenticated, IsTeacher]
+    lookup_url_kwarg = ["file_type"]
+    
+    def get(self, request, *args, **kwargs):
+        file_type = self.kwargs.get("file_type")
+        file_name = 'Question-Sample.csv' if file_type == 'question' else 'Submission-Sample.csv'
+        
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        storage_path = os.path.join(BASE_DIR, 'file_storage')
+        full_path=os.path.join(storage_path, file_name)
+        
+        with open(full_path, 'r') as f:
+            file = File(f).read()
+            response = HttpResponse(file, content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename={file_name}'
+            
+            return response

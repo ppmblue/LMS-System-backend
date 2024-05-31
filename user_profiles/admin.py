@@ -23,10 +23,11 @@ class UserProfileAdmin(UserAdmin):
         "first_name",
         "last_name",
         "is_teacher",
+        "is_head_teacher",
         "phone_number",
     ]
-    search_fields = ["username", "email", "first_name", "last_name", "is_teacher"]
-    list_filter = ["is_teacher", "is_superuser"]
+    search_fields = ["username", "email", "first_name", "last_name", "is_teacher", "is_head_teacher"]
+    list_filter = ["is_teacher", "is_head_teacher", "is_superuser"]
     fieldsets = (
         (None, {"fields": ("username", "password")}),
         (
@@ -42,7 +43,7 @@ class UserProfileAdmin(UserAdmin):
                 )
             },
         ),
-        ("Permissions", {"fields": ("is_teacher", "is_superuser")}),
+        ("Permissions", {"fields": ("is_teacher", "is_head_teacher", "is_superuser")}),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
 

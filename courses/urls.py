@@ -34,6 +34,11 @@ urlpatterns = [
         name="lo-list",
     ),
     path(
+        "courses/<str:course_code>/outcomes/create",
+        views.CreateLearningOutcomeList.as_view(),
+        name="create-lo-list"  
+    ),
+    path(
         "courses/<str:course_code>/outcomes/<str:outcome_code>/",
         views.LearningOutcomeDetail.as_view(),
         name="lo-detail",
@@ -59,6 +64,11 @@ urlpatterns = [
         "classes/<str:class_code>/exercises/",
         views.ExerciseList.as_view(),
         name="exercise-list-by-class",
+    ),
+    path(
+        "classes/<str:class_code>/labs/<str:lab_name>/exercises/",
+        views.CreateNewExcercise.as_view(),
+        name="create-exercise-by-class",
     ),
     path(
         "classes/<str:class_code>/exercises/<str:exercise_id>/",
@@ -110,9 +120,14 @@ urlpatterns = [
         views.StudentListByClass.as_view(),
         name="list-student-by-class"
     ),
-        path(
+    path(
         "classes/<str:class_code>/students/<str:student_id>/recommend",
         views.ExerciseRecommendation.as_view(),
         name="exercise-recommend"
     ),
+    path(
+        "sample/<str:file_type>/download",
+        views.DownloadSampleFile.as_view(),
+        name="download-sample"
+    )
 ]

@@ -46,6 +46,7 @@ class RegisterAPIView(generics.CreateAPIView):
                     "last_name": student.last_name,
                     "phone_number": request.data.get("phone_number"),
                     "is_teacher": False,
+                    "is_head_teacher": False,
                     "student_id": student.student_id,
                     "major": request.data.get("major"),
                     "password": request.data.get("password"),

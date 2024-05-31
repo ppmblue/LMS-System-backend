@@ -117,6 +117,15 @@ class LearningOutcomeSerializer(serializers.ModelSerializer):
             "parent_outcome",
         )
         lookup_field = ["course__course_code", "outcome_code"]
+        
+class LearningOutcomeListSerializer(serializers.Serializer):
+    outcome_code = serializers.CharField()
+    outcome_description = serializers.CharField(allow_blank=True)
+    threshold = serializers.IntegerField()
+    parent_outcome = serializers.CharField()
+    
+    class Meta:
+        fields = ['outcome_code', 'outcome_description', 'threshold', 'parent_outcome']
 
 
 class LabLOContributionSerializer(serializers.ModelSerializer):
@@ -192,6 +201,11 @@ class ExerciseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exercise
         fields = ['id', 'exercise_id', 'exercise_code', 'exercise_name', 'class_code', 'level', 'topic', 'lab', 'outcome', 'url']
+        
+class CreateExerciseSerializer(serializers.ModelSerializer):   
+    class Meta:
+        model = Exercise
+        fields = ['id', 'exercise_id', 'exercise_code', 'exercise_name', 'level', 'topic', 'outcome', 'url']
         
 class SubmissionSerializer(serializers.ModelSerializer):
     exercise = serializers.SlugRelatedField(

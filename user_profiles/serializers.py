@@ -13,6 +13,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "is_teacher",
+            "is_head_teacher",
             "phone_number",
             "student_id",
             "major",
@@ -38,6 +39,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["first_name"] = user.first_name
         token["last_name"] = user.last_name
         token["is_teacher"] = user.is_teacher
+        token["is_head_teacher"] = user.is_head_teacher
         token["student_id"] = user.student_id
         # Add other fields you need...
 
@@ -54,6 +56,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             "first_name": self.user.first_name,
             "last_name": self.user.last_name,
             "is_teacher": self.user.is_teacher,
+            "is_head_teacher": self.user.is_head_teacher,
             "student_id": self.user.student_id
             # Add other fields you need...
         }

@@ -9,6 +9,7 @@ class UserProfile(AbstractUser):
     last_name = models.CharField(max_length=30, blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     is_teacher = models.BooleanField(default=False)
+    is_head_teacher = models.BooleanField(default=False)
     # Additional fields for students
     student_id = models.CharField(max_length=20, blank=True, null=True)
     major = models.CharField(max_length=50, blank=True, null=True)
