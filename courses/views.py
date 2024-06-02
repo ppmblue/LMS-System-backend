@@ -817,10 +817,21 @@ class OutcomeProgressHistogram(views.APIView):
         outcome_code = self.kwargs.get("outcome_code")
         try:
             target_class = Class.objects.get(class_code=class_code)
-            outcome=LearningOutcome.objects.get(outcome_code=outcome_code, course__course_code=target_class.course.course_code)
         except Class.DoesNotExist as e:
             return Response(status.HTTP_400_BAD_REQUEST)
-
+        
+        result = []
+        if outcome_code == 'all':
+            for outcome in LearningOutcome.objects.filter(course__course_code=target_class.course.course_code):
+                item = self.get_progress_outcome(outcome.outcome_code, target_class)
+                result.append(item)
+        else:       
+            result.append(self.get_progress_outcome(outcome_code, target_class))
+        
+        return Response(result)
+    
+    def get_progress_outcome(self, outcome_code, target_class):
+        outcome=LearningOutcome.objects.get(outcome_code=outcome_code, course__course_code=target_class.course.course_code)
         result = {
             "outcome_code": outcome.outcome_code
         }
@@ -833,8 +844,8 @@ class OutcomeProgressHistogram(views.APIView):
         result["0.6 - 0.8"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.8, progress__gte=0.6).count()
         result["0.8 - 1"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__gte=0.8).count()
         result["average"] = round(OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome).aggregate(avg = Avg('progress'))['avg'], 2)
-                
-        return Response(result)
+        
+        return result
     
 class StudentListByClass(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
