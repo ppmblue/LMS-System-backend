@@ -103,7 +103,9 @@ class OutcomeProgressHelper:
         matrix = [[f'{x}-pre', f'{x}-in', f'{x}-post'] for x in range(1, target_class.num_of_lab + 1)]
         lab_names = [item for row in matrix for item in row]
         list_progress = []
-        for outcome in LearningOutcome.objects.all():
+        print('Info ', target_class.course.course_code)
+        print('Outcomes ', LearningOutcome.objects.filter(course__course_code=target_class.course.course_code))
+        for outcome in LearningOutcome.objects.filter(course__course_code=target_class.course.course_code):
             # Calculate outcome progress for each student
             for student_id in student_ids:
                 max_contribution = 0
@@ -117,6 +119,7 @@ class OutcomeProgressHelper:
                         , exercise__outcome__outcome_code=outcome.outcome_code)
                     
                     # Pass threshold
+                    print('Lab ', lab.class_code, lab.class_code.course.course_code, outcome.outcome_code)
                     threshold = LearningOutcome.objects.get(outcome_code=outcome.outcome_code
                         , course__course_code = lab.class_code.course.course_code).threshold
         

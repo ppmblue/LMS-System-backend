@@ -381,7 +381,7 @@ class LOContributionSummarize(views.APIView):
         for item in result:
             for x in range(0, num_of_labs):
                 lab = x + 1
-                if Exercise.objects.filter(outcome__outcome_code=item['outcome_code'],
+                if Exercise.objects.filter(class_code=class_code, outcome__outcome_code=item['outcome_code'],
                     lab__lab_name__contains=f'{lab}').exists():
                     item['labs'][x] = 0
                     
@@ -411,7 +411,7 @@ class LOContributionSummarize(views.APIView):
         if serializer.is_valid():
             for item in serializer.data:
                 labs = self.get_types_of_lab(class_code, item['outcome_code'], item['lab'])
-                weights = [0.2, 0.4, 0.4] if len(labs) == 3 else [0.3, 0.7]
+                weights = [0.2, 0.4, 0.4] if len(labs) == 3 else [1] if len(labs) == 1 else [0.3, 0.7]
                 outcome = LearningOutcome.objects.get(outcome_code=item['outcome_code'], course__course_code=course_code)
                 for index, lab_val in enumerate(labs):
                     lab = Lab.objects.get(id=lab_val)
@@ -467,7 +467,8 @@ class ExerciseUploadForm(views.APIView):
         try:
             file_data = file.read().decode("utf-8")
             lines = file_data.split("\r\n")
-
+            if len(lines) == 1: 
+                lines = file_data.split("\n")
             exercises = []
             for line in lines[1:]:
                 fields = line.split(";")
@@ -549,6 +550,8 @@ class ExersiceContributionAnalysis(views.APIView):
             # Analyze absent/available of lab-outcome
             file_data = file.read().decode("utf-8")
             lines = file_data.split("\r\n")
+            if len(lines) == 1:
+                lines = file_data.split("\n")
             for line in lines[1:]:
                 fields = line.split(";")
                 if len(fields) != 8: continue
