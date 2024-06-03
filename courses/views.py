@@ -870,7 +870,7 @@ class StudentListByClass(generics.ListAPIView):
             student_id__in=student_ids
         )
         
-class ExerciseRecommendation(views.APIView):
+class ExerciseRecommendation(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     lookup_url_kwarg = ["class_code", "student_id", "outcome_code"]
 
