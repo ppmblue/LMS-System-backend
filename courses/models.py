@@ -250,3 +250,6 @@ class RecommendationsTrial(models.Model):
     class Meta:
         managed = False
         db_table = 'recommendations_trial'
+        
+    def __str__(self):
+        return f"Recommend {self.student_id} for {self.outcome_id}"
