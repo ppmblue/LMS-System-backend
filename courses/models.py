@@ -242,6 +242,7 @@ class OutcomeProgress(models.Model):
     )
     
 class RecommendationsTrial(models.Model):
+    id = models.AutoField(primary_key=True)
     student_id = models.CharField(blank=True, null=True)
     outcome_id = models.IntegerField(blank=True, null=True)
     class_code = models.CharField(blank=True, null=True)
