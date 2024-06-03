@@ -248,7 +248,7 @@ class RecommendationsTrial(models.Model):
     recommendations = models.CharField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'recommendations_trial'
         
     def __str__(self):
