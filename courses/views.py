@@ -879,15 +879,13 @@ class ExerciseRecommendation(views.APIView):
         student_id = self.kwargs.get("student_id")
         outcome_code = self.kwargs.get("outcome_code")
         
-        recommendations = RecommendationsTrial.objects.all()
-        print('Recommend ', recommendations[0])
         try:
             target_class = Class.objects.get(class_code=class_code)
             student = Student.objects.get(student_id=int(student_id))
-            outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course=target_class.course)
+            outcome = LearningOutcome.objects.filter(outcome_code=outcome_code)[0]
             student_secured = student.secured_student_id.replace("'", "''")
-            print('Compare ', student.secured_student_id, outcome.pk, f"SELECT recommendations from recommendations_trial where student_id='{student_secured}' and outcome_id=13")
-            result = recommendations[1:-1].split(',')
+            recommend = RecommendationsTrial.objects.get(outcome_id=outcome.pk, student_id=student.secured_student_id)
+            result = recommend.recommendations[1:-1].split(',')
             print('Result ', result)
             questions = list(map(lambda x: int(x), result))
         except Exception:
