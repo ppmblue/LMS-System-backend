@@ -886,9 +886,9 @@ class ExerciseRecommendation(generics.ListAPIView):
             outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course=target_class.course)
             student_secured = student.secured_student_id.replace("'", "''")
             print('Compare ', student.secured_student_id, outcome.pk, f"SELECT * from recommendations_trial where student_id='{student_secured}' and outcome_id=13")
-            recommend = RecommendationsTrial.objects.raw(f"SELECT * from recommendations_trial where student_id='{student_secured}' and outcome_id=13")
-            print('Recommend ', recommend[0])
-            result = recommend.recommendations[1:-1].split(',')
+            recommendations = RecommendationsTrial.objects.raw(f"SELECT * from recommendations_trial where student_id='{student_secured}' and outcome_id=13")
+            print('Recommend ', recommendations[0])
+            result = recommendations.recommendations[1:-1].split(',')
             print('Result ', result)
             questions = list(map(lambda x: int(x), result))
         except Exception:
