@@ -879,7 +879,7 @@ class ExerciseRecommendation(views.APIView):
         student_id = self.kwargs.get("student_id")
         outcome_code = self.kwargs.get("outcome_code")
         
-        recommendations = RecommendationsTrial.objects.raw("SELECT * from recommendations_trial")
+        recommendations = RecommendationsTrial.objects.raw("SELECT 1 as id, recommendations from recommendations_trial")
         print('Recommend ', recommendations[0])
         try:
             target_class = Class.objects.get(class_code=class_code)
