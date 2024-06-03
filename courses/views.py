@@ -892,7 +892,7 @@ class ExerciseRecommendation(generics.ListAPIView):
         except Exception:
             return Response(status.HTTP_400_BAD_REQUEST)
         
-        preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(questions)])
+        preserved = Case(*[When(exercise_id=pk, then=pos) for pos, pk in enumerate(questions)])
         return Exercise.objects.filter(
             class_code=class_code,
             exercise_id__in=questions
