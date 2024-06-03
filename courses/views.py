@@ -900,21 +900,21 @@ class StudentListByClass(generics.ListAPIView):
 #         print('Query set ', query_set)
 #         return query_set
         
-# class DownloadSampleFile(views.APIView):
-#     permission_classes = [IsAuthenticated, IsTeacher]
-#     lookup_url_kwarg = ["file_type"]
+class DownloadSampleFile(views.APIView):
+    permission_classes = [IsAuthenticated, IsTeacher]
+    lookup_url_kwarg = ["file_type"]
     
-#     def get(self, request, *args, **kwargs):
-#         file_type = self.kwargs.get("file_type")
-#         file_name = 'Question-Sample.csv' if file_type == 'question' else 'Submission-Sample.csv'
+    def get(self, request, *args, **kwargs):
+        file_type = self.kwargs.get("file_type")
+        file_name = 'Question-Sample.csv' if file_type == 'question' else 'Submission-Sample.csv'
         
-#         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#         storage_path = os.path.join(BASE_DIR, 'file_storage')
-#         full_path=os.path.join(storage_path, file_name)
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        storage_path = os.path.join(BASE_DIR, 'file_storage')
+        full_path=os.path.join(storage_path, file_name)
         
-#         with open(full_path, 'r') as f:
-#             file = File(f).read()
-#             response = HttpResponse(file, content_type='text/csv')
-#             response['Content-Disposition'] = f'attachment; filename={file_name}'
+        with open(full_path, 'r') as f:
+            file = File(f).read()
+            response = HttpResponse(file, content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename={file_name}'
             
-#             return response
+            return response
