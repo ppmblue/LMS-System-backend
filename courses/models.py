@@ -242,10 +242,10 @@ class OutcomeProgress(models.Model):
     )
     
 class RecommendationsTrial(models.Model):
-    student_id = models.CharField(blank=True, null=True)
-    outcome_id = models.IntegerField(blank=True, null=True)
-    class_code = models.CharField(blank=True, null=True)
-    recommendations = models.CharField(blank=True, null=True)
+    student_id = models.TextField(blank=True, null=True)
+    outcome_id = models.BigIntegerField(blank=True, null=True)
+    class_code = models.TextField(blank=True, null=True)
+    recommendations = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
