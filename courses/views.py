@@ -68,7 +68,7 @@ class ClassListByCourse(generics.ListCreateAPIView):
     def get_queryset(self):
         course_code = self.kwargs.get("course_code")
         semester_name = self.request.query_params.get("semester")
-        queryset = Class.objects.filter(class_code__ne='20231_CO2003_L01')
+        queryset = Class.objects.all().exclude(class_code='20231_CO2003_L01')
         try:
             target_course = Course.objects.get(course_code=course_code)
             queryset = queryset.filter(course__course_code=course_code).select_related(
@@ -110,7 +110,7 @@ class ClassList(generics.ListAPIView):
         if (self.request.user.is_head_teacher):
             return queryset
         
-        return queryset.filter(teacher__email=self.request.user.email, class_code__ne='20231_CO2003_L01')
+        return queryset.filter(teacher__email=self.request.user.email).exclude(class_code='20231_CO2003_L01')
 
     def perform_create(self, serializer):
         serializer.save(teacher=self.request.user.email)
