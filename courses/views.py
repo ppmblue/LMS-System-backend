@@ -887,10 +887,11 @@ class ExerciseRecommendation(generics.ListAPIView):
             
             recommend = RecommendationsTrial.objects.get(student_id=student.secured_student_id, outcome_id=outcome.pk)
             result = recommend.recommendations[1:-1].split(',')
-            questions = map(lambda x: int(x), result)
+            questions = list(map(lambda x: int(x), result))
         except Exception:
             return Response(status.HTTP_400_BAD_REQUEST)
         
+        print('Questions ', questions)
         return Exercise.objects.filter(
             class_code = class_code,
             exercise_id__in = questions
