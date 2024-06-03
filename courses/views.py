@@ -870,12 +870,12 @@ class StudentListByClass(generics.ListAPIView):
             student_id__in=student_ids
         )
         
-class ExerciseRecommendation(generics.ListAPIView):
+class ExerciseRecommendation(views.APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ExerciseSerializer
     lookup_url_kwarg = ["class_code", "student_id", "outcome_code"]
 
-    def get_queryset(self):
+    def get(self, request, *args, **kwargs):
         class_code = self.kwargs.get("class_code")
         student_id = self.kwargs.get("student_id")
         outcome_code = self.kwargs.get("outcome_code")
@@ -899,7 +899,7 @@ class ExerciseRecommendation(generics.ListAPIView):
             exercise_id__in=questions
         )
         print('Query set ', query_set)
-        return query_set
+        return Response(query_set)
         
 class DownloadSampleFile(views.APIView):
     permission_classes = [IsAuthenticated, IsTeacher]
