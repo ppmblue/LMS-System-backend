@@ -843,7 +843,11 @@ class OutcomeProgressHistogram(views.APIView):
         result["0.4 - 0.6"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.6, progress__gte=0.4).count()
         result["0.6 - 0.8"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__lt=0.8, progress__gte=0.6).count()
         result["0.8 - 1"] = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome, progress__gte=0.8).count()
-        result["average"] = round(OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome).aggregate(avg = Avg('progress'))['avg'], 2)
+        temp = OutcomeProgress.objects.filter(lab=last_lab, outcome=outcome).aggregate(avg = Avg('progress'))['avg']
+        if temp is None:
+            result["average"] = 0
+        else:
+            result["average"] = round(temp, 2)
         
         return result
     

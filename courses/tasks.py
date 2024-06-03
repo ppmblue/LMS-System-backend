@@ -116,6 +116,7 @@ class OutcomeProgressHelper:
                     lab = Lab.objects.get(class_code__class_code=class_code, lab_name=lab_name)
                     submissions = Submission.objects.filter(student__student_id=student_id
                         , exercise__lab__lab_name=lab_name
+                        , exercise__class_code=target_class.class_code
                         , exercise__outcome__outcome_code=outcome.outcome_code)
                     
                     # Pass threshold
