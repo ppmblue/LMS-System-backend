@@ -893,11 +893,12 @@ class ExerciseRecommendation(generics.ListAPIView):
         except Exception:
             return Response(status.HTTP_400_BAD_REQUEST)
         
-        print('Questions ', questions)
-        return Exercise.objects.filter(
+        query_set = Exercise.objects.filter(
             class_code=class_code,
             exercise_id__in=questions
         )
+        print('Query set ', query_set)
+        return query_set
         
 class DownloadSampleFile(views.APIView):
     permission_classes = [IsAuthenticated, IsTeacher]
