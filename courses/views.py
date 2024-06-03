@@ -871,6 +871,7 @@ class StudentListByClass(generics.ListAPIView):
         )
         
 class ExerciseRecommendation(generics.ListAPIView):
+    serializer_class = ExerciseSerializer
     permission_classes = [IsAuthenticated]
     lookup_url_kwarg = ["class_code", "student_id", "outcome_code"]
 
