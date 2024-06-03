@@ -121,7 +121,7 @@ urlpatterns = [
         name="list-student-by-class"
     ),
     path(
-        "classes/<str:class_code>/students/<str:student_id>/recommend",
+        "classes/<str:class_code>/outcomes/<str:outcome_code>/students/<str:student_id>/recommend",
         views.ExerciseRecommendation.as_view(),
         name="exercise-recommend"
     ),
