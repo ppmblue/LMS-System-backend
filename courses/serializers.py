@@ -9,8 +9,7 @@ from courses.models import (
     UploadForm,
     Exercise,
     Submission,
-    Enrollment,
-    RecommendationsTrial
+    Enrollment
 )
 from user_profiles.models import UserProfile
 from students.models import Student
@@ -247,9 +246,3 @@ class SubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = ['exercise', 'student', 'score', 'time_taken', 'started_time', 'submitted_time']
-        
-        
-class RecommendationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RecommendationsTrial
-        fields = '__all__'

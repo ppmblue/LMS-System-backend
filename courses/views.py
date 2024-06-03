@@ -13,7 +13,7 @@ from courses.models import (
     Submission,
     OutcomeProgress,
     Enrollment,
-    RecommendationsTrial
+    # RecommendationsTrial
 )
 from students.models import Student
 from rest_framework import serializers, status, parsers, generics, views
@@ -870,51 +870,51 @@ class StudentListByClass(generics.ListAPIView):
             student_id__in=student_ids
         )
         
-class ExerciseRecommendation(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = ExerciseSerializer
-    lookup_url_kwarg = ["class_code", "student_id", "outcome_code"]
+# class ExerciseRecommendation(generics.ListAPIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ExerciseSerializer
+#     lookup_url_kwarg = ["class_code", "student_id", "outcome_code"]
 
-    def get_queryset(self):
-        class_code = self.kwargs.get("class_code")
-        student_id = self.kwargs.get("student_id")
-        outcome_code = self.kwargs.get("outcome_code")
+#     def get_queryset(self):
+#         class_code = self.kwargs.get("class_code")
+#         student_id = self.kwargs.get("student_id")
+#         outcome_code = self.kwargs.get("outcome_code")
         
-        try:
-            target_class = Class.objects.get(class_code=class_code)
-            student = Student.objects.get(student_id=int(student_id))
-            outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course=target_class.course)
-            print('Outcome ', outcome, student)
-            recommend = RecommendationsTrial.objects.get(student_id=student.secured_student_id, outcome_id=outcome.pk)
-            print('Recommend ', recommend)
-            result = recommend.recommendations[1:-1].split(',')
-            print('Result ', result)
-            questions = list(map(lambda x: int(x), result))
-        except Exception:
-            return Response(status.HTTP_400_BAD_REQUEST)
+#         try:
+#             target_class = Class.objects.get(class_code=class_code)
+#             student = Student.objects.get(student_id=int(student_id))
+#             outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course=target_class.course)
+#             print('Outcome ', outcome, student)
+#             recommend = RecommendationsTrial.objects.get(student_id=student.secured_student_id, outcome_id=outcome.pk)
+#             print('Recommend ', recommend)
+#             result = recommend.recommendations[1:-1].split(',')
+#             print('Result ', result)
+#             questions = list(map(lambda x: int(x), result))
+#         except Exception:
+#             return Response(status.HTTP_400_BAD_REQUEST)
         
-        query_set = Exercise.objects.filter(
-            class_code=class_code,
-            exercise_id__in=questions
-        )
-        print('Query set ', query_set)
-        return query_set
+#         query_set = Exercise.objects.filter(
+#             class_code=class_code,
+#             exercise_id__in=questions
+#         )
+#         print('Query set ', query_set)
+#         return query_set
         
-class DownloadSampleFile(views.APIView):
-    permission_classes = [IsAuthenticated, IsTeacher]
-    lookup_url_kwarg = ["file_type"]
+# class DownloadSampleFile(views.APIView):
+#     permission_classes = [IsAuthenticated, IsTeacher]
+#     lookup_url_kwarg = ["file_type"]
     
-    def get(self, request, *args, **kwargs):
-        file_type = self.kwargs.get("file_type")
-        file_name = 'Question-Sample.csv' if file_type == 'question' else 'Submission-Sample.csv'
+#     def get(self, request, *args, **kwargs):
+#         file_type = self.kwargs.get("file_type")
+#         file_name = 'Question-Sample.csv' if file_type == 'question' else 'Submission-Sample.csv'
         
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        storage_path = os.path.join(BASE_DIR, 'file_storage')
-        full_path=os.path.join(storage_path, file_name)
+#         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#         storage_path = os.path.join(BASE_DIR, 'file_storage')
+#         full_path=os.path.join(storage_path, file_name)
         
-        with open(full_path, 'r') as f:
-            file = File(f).read()
-            response = HttpResponse(file, content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename={file_name}'
+#         with open(full_path, 'r') as f:
+#             file = File(f).read()
+#             response = HttpResponse(file, content_type='text/csv')
+#             response['Content-Disposition'] = f'attachment; filename={file_name}'
             
-            return response
+#             return response
