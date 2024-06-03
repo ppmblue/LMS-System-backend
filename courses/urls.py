@@ -120,11 +120,11 @@ urlpatterns = [
         views.StudentListByClass.as_view(),
         name="list-student-by-class"
     ),
-    # path(
-    #     "classes/<str:class_code>/outcomes/<str:outcome_code>/students/<str:student_id>/recommend",
-    #     views.ExerciseRecommendation.as_view(),
-    #     name="exercise-recommend"
-    # ),
+    path(
+        "classes/<str:class_code>/outcomes/<str:outcome_code>/students/<str:student_id>/recommend",
+        views.ExerciseRecommendation.as_view(),
+        name="exercise-recommend"
+    ),
     path(
         "sample/<str:file_type>/download",
         views.DownloadSampleFile.as_view(),

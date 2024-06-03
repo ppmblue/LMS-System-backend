@@ -241,15 +241,15 @@ class OutcomeProgress(models.Model):
         max_digits=5, decimal_places=2, default=0
     )
     
-# class RecommendationsTrial(models.Model):
-#     student_id = models.TextField(blank=True, null=True)
-#     outcome_id = models.BigIntegerField(blank=True, null=True)
-#     class_code = models.TextField(blank=True, null=True)
-#     recommendations = models.TextField(blank=True, null=True)
+class RecommendationsTrial(models.Model):
+    student_id = models.TextField(blank=True, null=True)
+    outcome_id = models.BigIntegerField(blank=True, null=True)
+    class_code = models.TextField(blank=True, null=True)
+    recommendations = models.TextField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False
-#         db_table = 'recommendations_trial'
+    class Meta:
+        managed = False
+        db_table = 'recommendations_trial'
         
-#     def __str__(self):
-#         return f"Recommend {self.student_id} for {self.outcome_id}"
+    def __str__(self):
+        return f"Recommend {self.student_id} for {self.outcome_id}"
