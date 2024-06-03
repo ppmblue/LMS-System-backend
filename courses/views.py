@@ -872,7 +872,6 @@ class StudentListByClass(generics.ListAPIView):
         
 class ExerciseRecommendation(views.APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = ExerciseSerializer
     lookup_url_kwarg = ["class_code", "student_id", "outcome_code"]
 
     def get(self, request, *args, **kwargs):
@@ -880,14 +879,14 @@ class ExerciseRecommendation(views.APIView):
         student_id = self.kwargs.get("student_id")
         outcome_code = self.kwargs.get("outcome_code")
         
+        recommendations = RecommendationsTrial.objects.all()
+        print('Recommend ', recommendations)
         try:
             target_class = Class.objects.get(class_code=class_code)
             student = Student.objects.get(student_id=int(student_id))
             outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course=target_class.course)
             student_secured = student.secured_student_id.replace("'", "''")
             print('Compare ', student.secured_student_id, outcome.pk, f"SELECT recommendations from recommendations_trial where student_id='{student_secured}' and outcome_id=13")
-            recommendations = RecommendationsTrial.objects.all()
-            print('Recommend ', recommendations)
             result = recommendations[1:-1].split(',')
             print('Result ', result)
             questions = list(map(lambda x: int(x), result))
