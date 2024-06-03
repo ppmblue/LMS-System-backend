@@ -123,7 +123,7 @@ class EnrollClassList(generics.ListAPIView):
     
     def get_queryset(self):
         student_id = int(self.kwargs.get("student_id"))
-        enroll_classes = Enrollment.objects.filter(student__student_id=student_id).values_list('class_code__class_code', flat=True).distinct()
+        enroll_classes = Enrollment.objects.filter(student__student_id=student_id).exclude(class_code__class_code='20231_CO2003_L01').values_list('class_code__class_code', flat=True).distinct()
         
         return Class.objects.filter(class_code__in=enroll_classes)
 
