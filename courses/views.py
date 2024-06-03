@@ -885,7 +885,7 @@ class ExerciseRecommendation(generics.ListAPIView):
             student = Student.objects.get(student_id=int(student_id))
             outcome = LearningOutcome.objects.get(outcome_code=outcome_code, course=target_class.course)
             print('Outcome ', outcome, student)
-            recommend = RecommendationsTrial.objects.get(student_id=student.secured_student_id, outcome_id=13)
+            recommend = RecommendationsTrial.objects.get(student_id=student.secured_student_id, outcome_id=outcome.pk)
             print('Recommend ', recommend)
             result = recommend.recommendations[1:-1].split(',')
             print('Result ', result)
