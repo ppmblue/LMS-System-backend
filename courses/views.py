@@ -714,7 +714,7 @@ class OutcomeProgressAnalysisList(views.APIView):
         result['secured_student'] = student.secured_student_id
         lab_names = self.get_interval(start_lab, end_lab, target_class.num_of_lab) if checkProgress else [start_lab, end_lab]
         # Init value
-        for outcome in LearningOutcome.objects.all():
+        for outcome in LearningOutcome.objects.filter(course__course_code=target_class.course.course_code):
             result[f'{outcome.outcome_code}'] = []
             result[f'max_{outcome.outcome_code}'] = []
                 
