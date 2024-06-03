@@ -874,7 +874,7 @@ class ExerciseRecommendation(views.APIView):
     permission_classes = [IsAuthenticated]
     lookup_url_kwarg = ["class_code", "student_id", "outcome_code"]
 
-    def get(self, request, *args, **kwargs):
+    def get_queryset(self):
         class_code = self.kwargs.get("class_code")
         student_id = self.kwargs.get("student_id")
         outcome_code = self.kwargs.get("outcome_code")
@@ -883,7 +883,6 @@ class ExerciseRecommendation(views.APIView):
             target_class = Class.objects.get(class_code=class_code)
             student = Student.objects.get(student_id=int(student_id))
             outcome = LearningOutcome.objects.filter(outcome_code=outcome_code)[0]
-            student_secured = student.secured_student_id.replace("'", "''")
             recommend = RecommendationsTrial.objects.get(outcome_id=outcome.pk, student_id=student.secured_student_id)
             result = recommend.recommendations[1:-1].split(',')
             print('Result ', result)
@@ -891,12 +890,10 @@ class ExerciseRecommendation(views.APIView):
         except Exception:
             return Response(status.HTTP_400_BAD_REQUEST)
         
-        query_set = Exercise.objects.filter(
+        return Exercise.objects.filter(
             class_code=class_code,
             exercise_id__in=questions
         )
-        print('Query set ', query_set)
-        return Response(query_set)
         
 class DownloadSampleFile(views.APIView):
     permission_classes = [IsAuthenticated, IsTeacher]
